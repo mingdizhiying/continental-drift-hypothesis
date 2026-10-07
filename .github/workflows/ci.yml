@@ -19,5 +19,9 @@ jobs:
         run: npm run check
       - name: Test world rules
         run: npm test
+      - name: Verify public demo export
+        run: |
+          npm run build:demo
+          git diff --exit-code -- dist
       - name: Check whitespace
         run: git diff --check
