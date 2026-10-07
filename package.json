@@ -13,6 +13,6 @@
     "start": "node server.js",
     "build:demo": "node scripts/build-demo.mjs",
     "test": "node --test world.test.js",
-    "check": "node --check app.js && node --check world.js && node --check server.js && node --check world.test.js"
+    "check": "node --check app.js && node --check barrier.js && node --check world.js && node --check server.js && node --check world.test.js"
   }
 }
