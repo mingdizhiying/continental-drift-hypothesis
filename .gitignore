@@ -1,0 +1,21 @@
+# Local runtime and credentials
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+*.pid
+
+# Local archives, exports and legacy screenshots
+backups/
+大陆漂移假说-第*轮.json
+demo-preview.png
+citizen-events-preview.png
+continental-drift-preview.png
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+coverage/

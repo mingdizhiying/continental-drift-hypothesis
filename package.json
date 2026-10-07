@@ -1,0 +1,17 @@
+{
+  "name": "continental-drift-hypothesis",
+  "version": "0.2.0",
+  "description": "大陆漂移假说：城市漂移、持续誓约与六十轮世界演化的游戏概念原型",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mingdizhiying/continental-drift-hypothesis.git"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test world.test.js",
+    "check": "node --check app.js && node --check world.js && node --check server.js && node --check world.test.js"
+  }
+}
