@@ -10,7 +10,7 @@
 
 ## 快速运行
 
-[在线试玩（本地模拟）](https://continental-drift-mingdizhiying.arcane-birch-8386.chatgpt.site)：无需登录或配置密钥，打开网页即可游玩。刷新会重新开始，请先导出需要保留的历史。
+[在线试玩（本地模拟）](https://continental-drift-mingdizhiying.mingdizhiying.chatgpt.site)：无需登录或配置密钥，打开网页即可游玩。刷新会重新开始，请先导出需要保留的历史。
 
 需要 **Node.js 24 LTS 或以上**。项目没有第三方 npm 依赖，无须安装依赖即可启动。
 
