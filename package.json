@@ -1,6 +1,6 @@
 {
   "name": "continental-drift-hypothesis",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "大陆漂移假说：城市漂移、持续誓约与六十轮世界演化的游戏概念原型",
   "private": true,
   "type": "module",
@@ -13,6 +13,6 @@
     "start": "node server.js",
     "build:demo": "node scripts/build-demo.mjs",
     "test": "node --test world.test.js",
-    "check": "node --check app.js && node --check barrier.js && node --check world.js && node --check server.js && node --check world.test.js"
+    "check": "node --check app.js && node --check barrier.js && node --check territory.js && node --check world.js && node --check server.js && node --check world.test.js"
   }
 }
