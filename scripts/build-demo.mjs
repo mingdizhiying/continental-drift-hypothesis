@@ -4,7 +4,7 @@ import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const destination = path.join(root, 'dist');
-const assets = ['index.html', 'app.js', 'barrier.js', 'world.js', 'style.css', '策划案.md'];
+const assets = ['index.html', 'app.js', 'barrier.js', 'world.js', 'territory.js', 'style.css', '策划案.md'];
 await mkdir(destination, { recursive: true });
 // Only these public files may be packaged. Refuse stale/unexpected files.
 for (const file of await readdir(destination)) {
