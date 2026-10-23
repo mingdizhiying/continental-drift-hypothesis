@@ -22,3 +22,5 @@ body.echo-open{overflow:hidden}
 #continue-echo{background:#e2bd7920;border-color:var(--gold)}
 #close-echo{white-space:nowrap}.chronicle>summary{font-size:18px}.chronicle #export{margin-top:16px}
 @media(max-width:600px){.echo-header{padding:16px 16px 8px}.echo-header h2{font-size:20px}#echo-description{padding:0 16px 12px}.echo-body{padding:0 16px 16px}.echo-footer{padding:12px 16px}#open-echo{font-size:12px;padding:9px}.chronicle>summary .hint{display:block;margin-top:6px}}
+
+main>#ending{margin-top:0;margin-bottom:32px;scroll-margin-top:20px}main>#ending:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
