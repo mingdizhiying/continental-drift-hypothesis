@@ -22,7 +22,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#mediate'))perform('m
 $('open-echo').onclick=openEcho;
 $('close-echo').onclick=()=>$('echo-dialog').close();
 $('continue-echo').onclick=()=>$('echo-dialog').close();
-$('echo-dialog').addEventListener('close',()=>{document.body.classList.remove('echo-open');if(!$('open-echo').disabled)$('open-echo').focus({preventScroll:true});});
+$('echo-dialog').addEventListener('close',()=>{document.body.classList.remove('echo-open');if(state.ended){$('ending').focus({preventScroll:true});$('ending').scrollIntoView({block:'start'});}else if(!$('open-echo').disabled)$('open-echo').focus({preventScroll:true});});
 $('reset').onclick=()=>{if(busy)return;$('echo-dialog').close();$('history-panel').open=false;state=initial();selected=state.current;clearPending();$('oath-text').value='';$('ai-status').textContent='新世界已生成，当前使用'+(useAi()?'真实AI接口（失败时明确回退）':'本地模拟')+'。';render();};$('export').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`大陆漂移假说-第${state.turn}轮.json`;a.click();URL.revokeObjectURL(url);};render();
 
 function renderBarrier(city){
