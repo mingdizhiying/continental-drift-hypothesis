@@ -8,6 +8,8 @@
 
 > 当前版本：v0.3.2。默认使用明确标注的本地模拟。真实 AI 接口已预留，尚未使用模型供应商凭据完成联调。
 
+[下载 v0.3.2 Release](https://github.com/mingdizhiying/continental-drift-hypothesis/releases/tag/v0.3.2) · [本版发布说明](docs/RELEASE-v0.3.2.md)
+
 ## 快速运行
 
 [在线试玩（本地模拟）](https://continental-drift-mingdizhiying.mingdizhiying.chatgpt.site)：无需登录或配置密钥，打开网页即可游玩。刷新会重新开始，请先导出需要保留的历史。
