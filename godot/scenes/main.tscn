@@ -241,11 +241,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "组织耕种"
 
-[node name="Mediate" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/Actions"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "调解争端"
-
 [node name="Build" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/Actions"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -256,10 +251,57 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "修复林地"
 
+[node name="Investigate" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "倾听与调解"
+
+[node name="Forest" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "采集灵木"
+
+[node name="Forge" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "修复圣光屏障"
+
+[node name="Reveal" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "公开秘密，取回光核"
+
 [node name="Observe" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/Actions"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "观察世界"
+
+[node name="BarrierStatus" type="Label" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.89, 0.76, 0.5, 1)
+autowrap_mode = 2
+text = "圣光屏障 0 / 6"
+
+[node name="LegacyLaws" type="HBoxContainer" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Fire" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/LegacyLaws"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "禁火"
+
+[node name="Silence" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/LegacyLaws"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "禁谎"
+
+[node name="Memory" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout/LegacyLaws"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "偿债"
 
 [node name="OathHeading" type="Label" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
 layout_mode = 2

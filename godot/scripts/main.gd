@@ -13,8 +13,16 @@ func _ready() -> void:
 		var action = config.actions[i]
 		var button: Button = %Actions.get_child(i)
 		button.text = action.title
-		button.tooltip_text = action.description + "；推进一轮。"
+		button.set_meta("action_id", action.id)
 		button.pressed.connect(perform.bind(action.id))
+	for i in CityEconomy.LEGACY_LAWS.size():
+		var key = CityEconomy.LEGACY_LAWS.keys()[i]
+		var law = CityEconomy.LEGACY_LAWS[key]
+		%LegacyLaws.get_child(i).tooltip_text = law.detail + "与其他誓约共用唯一槽，需判定并确认。"
+		%LegacyLaws.get_child(i).pressed.connect(func():
+			%OathInput.text = law.text
+			clear_pending()
+			judge_oath())
 	for c in config.cities:
 		var button = Button.new()
 		button.text = c.city_name
@@ -82,7 +90,17 @@ func render(animate: bool = false) -> void:
 		metric_nodes[key].get_node("Title").text = "%s  %d / 100" % [WorldRules.METRICS[key], c[key]]
 		metric_nodes[key].get_node("Bar").value = c[key]
 	for button in %Actions.get_children():
+		var spec = rules.action_spec(c, button.get_meta("action_id"))
+		var blocked = CityEconomy.block(c, spec)
+		button.disabled = not can_act or not blocked.is_empty()
+		button.text = spec.name + ("\n资源不足" if blocked.begins_with("资源不足") else ("\n" + blocked if not blocked.is_empty() else ""))
+		button.tooltip_text = "%s\n支付：%s\n获得：%s\n%s" % [spec.place, CityEconomy.describe(spec.cost, "−") if not spec.cost.is_empty() else "无", CityEconomy.describe(spec.gain, "+") if not spec.gain.is_empty() else "无直接收益，仍推进一轮", blocked]
+	for button in %LegacyLaws.get_children():
 		button.disabled = not can_act
+	var outcome = CityEconomy.outcome(c)
+	%BarrierStatus.text = "圣光屏障 %d / 6 · %s" % [c.barrier, outcome.title if c.barrier >= 6 else "尚未展开"]
+	if not c.barrierResults.is_empty():
+		%BarrierStatus.text += "\n第%d轮任期结果：%s" % [c.barrierResults[-1].turn, c.barrierResults[-1].title]
 	%JudgeButton.disabled = not can_act
 	%ConfirmButton.disabled = not can_act
 	%ConfirmButton.visible = not pending.is_empty()
@@ -199,7 +217,7 @@ func perform(action: String) -> void:
 			var ending: Dictionary = await %AIClient.request("ending", {"state": next})
 			if valid_ending(ending):
 				ending.source = "真实AI"
-				next.ending = ending
+				next.ending.merge(ending, true)
 				%AIStatus.text = "真实 AI 结局已生成；历史证据可导出核对。"
 			else:
 				%AIStatus.text = "最终 AI 结算未生效：%s；显示本地历史结算。" % ending.get("error", "结局格式无效")
@@ -234,6 +252,8 @@ func show_ending() -> void:
 		return
 	var ending = state.ending
 	var text = "[color=#e2bd79][font_size=28]%s[/font_size][/color]\n%s\n\n%s\n\n[color=#e2bd79]历史依据[/color]\n" % [escape_bb(ending.title), escape_bb(ending.source), escape_bb(ending.text)]
+	for c in ending.get("barriers", []):
+		text += "%s：%s · 屏障%d/6，安定%d，粮食%d%s\n" % [c.city, c.title, c.barrier, c.peace, c.food, "" if c.governed else "（尚未治理）"]
 	for evidence in ending.evidence:
 		text += "\n" + escape_bb(evidence) + "\n"
 	%EndingDialog.get_node("Content").text = text
@@ -242,8 +262,9 @@ func show_ending() -> void:
 func show_rules() -> void:
 	var text = "[color=#e2bd79][font_size=24]城市终将远行，你留下什么不变？[/font_size][/color]\n\n每次行动推进一轮；所有城市漂移并演化。每六轮自动前往最近的其他城市，允许返回旧城，第六十轮结算。大陆板块允许重叠，距离按城市中心计算。\n\n[color=#e2bd79]城市治理[/color]\n"
 	for action in config.actions:
-		text += "%s：%s。\n" % [escape_bb(action.title), escape_bb(action.description)]
-	text += "\n[color=#e2bd79]誓约火炬[/color]\n输入 → 判定条件 → 确认。每城只保留一条，替换与查看不推进时间；离任后保留。\n本地模拟只识别位置、粮食、和平、繁荣、生态中的单一目标。实行条件按轮初状态判断；数值保护以轮初值为下限。位置誓约恢复时回到立誓坐标。\n"
+		text += "%s：支付%s，获得%s。\n" % [escape_bb(action.title), CityEconomy.describe(action.cost, "−") if not action.cost.is_empty() else "无", CityEconomy.describe(action.gain, "+") if not action.gain.is_empty() else "无直接收益"]
+	text += "\n所有行动先完整支付，资源不足、重复公开秘密或屏障已完成时不耗回合。每轮基础粮食消耗2。屏障6且安定≥60、粮食≥20为共誓，否则为孤光；未完成为长夜。每六轮记录结果，第六十轮汇总十次任期。禁火、禁谎、偿债与五种守护共用唯一誓约槽，按轮初条件生效。守护不返还主动支付的成本。\n"
+	text += "\n[color=#e2bd79]誓约火炬[/color]\n输入 → 判定条件 → 确认。每城只保留一条，替换与查看不推进时间；离任后保留。\n本地支持五种守护和三种旧城法则，每次只能选择一项。实行条件按轮初状态判断；数值保护以轮初值减主动支付成本为下限。位置誓约恢复时回到立誓坐标。\n"
 	for key in WorldRules.OATH_RULES:
 		text += "%s：%s。\n" % [WorldRules.OATH_TYPES[key], WorldRules.OATH_RULES[key][2]]
 	text += "\n[color=#e2bd79]十种市民事件[/color]\n每轮在刚治理的城市触发一个；按以下顺序选择首个满足条件且未发生的事件。\n"

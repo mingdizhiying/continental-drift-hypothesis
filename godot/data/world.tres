@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="WorldConfig" load_steps=26 format=3]
+[gd_resource type="Resource" script_class="WorldConfig" load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/world_config.gd" id="World"]
 [ext_resource type="Script" path="res://scripts/data/city_definition.gd" id="City"]
@@ -87,36 +87,73 @@ tint = Color(0.4, 0.57, 0.56, 1)
 script = ExtResource("Action")
 id = "farm"
 title = "组织耕种"
-description = "粮食+7，生态−2"
-effect = {"food":7,"ecology":-2}
-
-[sub_resource type="Resource" id="mediate"]
-script = ExtResource("Action")
-id = "mediate"
-title = "调解争端"
-description = "安定+6，粮食−1"
-effect = {"peace":6,"food":-1}
+description = "农田"
+place = "农田"
+cost = {"trade":2,"ecology":3}
+gain = {"food":10}
 
 [sub_resource type="Resource" id="build"]
 script = ExtResource("Action")
 id = "build"
 title = "建设集市"
-description = "繁荣+6，生态−3"
-effect = {"trade":6,"ecology":-3}
+description = "集市"
+place = "集市"
+cost = {"food":4,"ecology":4}
+gain = {"trade":9}
 
 [sub_resource type="Resource" id="restore"]
 script = ExtResource("Action")
 id = "restore"
 title = "修复林地"
-description = "生态+6，繁荣−2"
-effect = {"ecology":6,"trade":-2}
+description = "林地"
+place = "林地"
+cost = {"food":3,"trade":5}
+gain = {"ecology":10}
+
+[sub_resource type="Resource" id="investigate"]
+script = ExtResource("Action")
+id = "investigate"
+title = "倾听与调解"
+description = "旧誓广场 · 守屏人祈"
+place = "旧誓广场 · 守屏人祈"
+cost = {"food":3,"trade":2}
+gain = {"peace":7}
+
+[sub_resource type="Resource" id="forest"]
+script = ExtResource("Action")
+id = "forest"
+title = "采集灵木"
+description = "无声林地 · 树灵苔"
+place = "无声林地 · 树灵苔"
+cost = {"ecology":10,"peace":4}
+gain = {"trade":12}
+
+[sub_resource type="Resource" id="forge"]
+script = ExtResource("Action")
+id = "forge"
+title = "修复圣光屏障"
+description = "余烬工坊 · 铁匠烬"
+place = "余烬工坊 · 铁匠烬"
+cost = {"trade":18,"food":7,"ecology":4,"peace":3}
+gain = {"barrier":2}
+
+[sub_resource type="Resource" id="reveal"]
+script = ExtResource("Action")
+id = "reveal"
+title = "公开秘密，取回光核"
+description = "旧誓广场 · 守屏人祈"
+place = "旧誓广场 · 守屏人祈"
+cost = {"peace":16,"trade":4}
+gain = {"barrier":2}
 
 [sub_resource type="Resource" id="observe"]
 script = ExtResource("Action")
 id = "observe"
 title = "观察世界"
-description = "推进一轮，观察漂移"
-effect = {}
+description = "瞭望台"
+place = "瞭望台"
+cost = {}
+gain = {}
 
 [sub_resource type="Resource" id="hunger"]
 script = ExtResource("Event")
@@ -221,5 +258,5 @@ predicate = "watch"
 [resource]
 script = ExtResource("World")
 cities = Array[ExtResource("City")]([SubResource("ember"), SubResource("grove"), SubResource("tide"), SubResource("archive"), SubResource("grain"), SubResource("mist")])
-actions = Array[ExtResource("Action")]([SubResource("farm"), SubResource("mediate"), SubResource("build"), SubResource("restore"), SubResource("observe")])
+actions = Array[ExtResource("Action")]([SubResource("farm"), SubResource("build"), SubResource("restore"), SubResource("investigate"), SubResource("forest"), SubResource("forge"), SubResource("reveal"), SubResource("observe")])
 events = Array[ExtResource("Event")]([SubResource("hunger"), SubResource("unrest"), SubResource("seed"), SubResource("market"), SubResource("refugees"), SubResource("feast"), SubResource("craft"), SubResource("isolation"), SubResource("torch"), SubResource("watch")])

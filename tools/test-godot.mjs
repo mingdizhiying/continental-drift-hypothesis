@@ -17,6 +17,7 @@ async function run(command, args) {
   });
 }
 await run(process.execPath, ['tools/godot-reference.mjs']);
+await run(process.execPath, ['--test','tools/web-baseline/world.test.js']);
 await run(executable, ['--headless','--path','godot','--editor','--import','--quit']);
 await run(executable, ['--headless','--path','godot','--script','res://tests/test_world.gd']);
 await run(executable, ['--headless','--path','godot','--script','res://tests/test_ui.gd']);

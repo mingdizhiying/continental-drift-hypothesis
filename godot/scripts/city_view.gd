@@ -11,12 +11,14 @@ func _ready() -> void:
 
 func configure(c: Dictionary, definition: CityDefinition, index: int, current: bool, chosen: bool) -> void:
 	city_id = c.id
+	set_meta("barrier_complete", c.barrier >= 6)
 	$Plate.color = Color(definition.tint, 0.38 if not chosen else 0.65)
 	$Plate.rotation = index * 0.72
 	$Outline.rotation = $Plate.rotation
 	$Outline.default_color = Color("e2bd79") if chosen else Color(definition.tint, 0.8)
 	$Marker.color = Color("edce8c") if current else Color("b6d7ce")
 	$Halo.visible = current
+	queue_redraw()
 	$LabelRoot/Button.text = c.name
 	$LabelRoot/Button.button_pressed = chosen
 	$LabelRoot/Status.text = ("✦ 誓约生效" if WorldRules.oath_active(c) else "◇ 誓约休眠") if c.oath != null else ("当前治理" if current else "尚未立誓")
@@ -25,3 +27,7 @@ func configure(c: Dictionary, definition: CityDefinition, index: int, current: b
 
 func set_label_offset(offset: Vector2) -> void:
 	$LabelRoot.position = offset
+
+func _draw() -> void:
+	if has_meta("barrier_complete") and get_meta("barrier_complete"):
+		draw_arc(Vector2.ZERO, 65, 0, TAU, 64, Color("e2bd79"), 2, true)

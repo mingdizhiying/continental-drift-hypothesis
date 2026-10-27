@@ -10,6 +10,7 @@ func frame(s: Dictionary) -> Dictionary:
 	return {"turn": s.turn, "current": s.current, "visited": s.visited, "ended": s.ended,
 		"cities": s.cities, "events": s.events, "interactions": s.get("interactions", []),
 		"links": s.get("links", []), "historyCount": s.history.size(),
+		"lastAction": s.get("lastAction"),
 		"historyTail": s.history.filter(func(h): return not h.has("cities")).slice(-5), "ending": s.ending}
 
 func check(value: bool, message: String) -> void:
@@ -45,14 +46,23 @@ func run() -> void:
 	var scenarios = JSON.parse_string(FileAccess.get_file_as_string(path))
 	for scenario in scenarios:
 		var s = rules.initial()
+		var last_before = s
 		compare(frame(s), scenario.frames[0], scenario.name + "/initial")
 		for i in scenario.ops.size():
 			var op = scenario.ops[i]
+			var next = s
 			match op.kind:
-				"oath": s = WorldRules.set_oath(s, WorldRules.parse_oath(op.text))
+				"oath": next = WorldRules.set_oath(s, WorldRules.parse_oath(op.text))
 				"patch": WorldRules.city(s, op.city).merge(op.values, true)
-				"ai": s = WorldRules.apply_ai_turn(s, op.data, s)
-				_: s = rules.advance(s, op.action)
+				"ai": next = WorldRules.apply_ai_turn(s, op.data, last_before)
+				_:
+					last_before = s
+					next = rules.advance(s, op.action)
+			if op.has("expectedError"):
+				check(next.get("error") == op.expectedError, scenario.name + ": rejection mismatch " + str(next.get("error")))
+			else:
+				check(not next.has("error"), scenario.name + ": unexpected rejection")
+				s = next
 			compare(frame(s), scenario.frames[i + 1], scenario.name + "/%d" % i)
 		print("Reference scenario: ", scenario.name)
 	for text in ["", "无限资源", "守护粮食与和平", "大家幸福"]:

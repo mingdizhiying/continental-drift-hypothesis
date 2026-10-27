@@ -13,6 +13,12 @@ func check(value: bool, message: String) -> void:
 	if not value:
 		failures.append(message)
 
+func action_button(id: String) -> Button:
+	for button in game.get_node("%Actions").get_children():
+		if button.get_meta("action_id") == id:
+			return button
+	return null
+
 func capture(name: String) -> void:
 	if screenshot_dir.is_empty():
 		return
@@ -53,7 +59,7 @@ func run() -> void:
 	check(game.state.cities[0].oath.type == "peace", "Oath replacement failed")
 	for i in 6:
 		game.get_node("%Actions").get_child(0).pressed.emit()
-	check(game.state.turn == 6 and game.state.current == "grove", "Six-turn migration failed in UI")
+	check(game.state.turn == 6 and game.state.current == WorldRules.nearest(game.state, "ember").id, "Six-turn migration failed in UI")
 	check(game.selected == game.state.current, "UI selection did not follow migration")
 	check(game.state.cities[0].oath != null, "Old-city oath lost")
 	var export_path = "user://ui-test-history.json"
@@ -76,8 +82,10 @@ func run() -> void:
 	game.selected = game.state.current
 	game.render(false)
 	for i in 54:
-		game.get_node("%Actions").get_child(4).pressed.emit()
+		action_button("observe").pressed.emit()
 	check(game.state.ended and game.state.turn == 60, "UI could not reach ending")
+	check(game.state.history.filter(func(h): return h.kind == "屏障结果").size() == 10, "Ten tenure results missing")
+	check(game.state.ending.barriers.size() == 6, "Six-city barrier summary missing")
 	check(game.get_node("%EndingDialog").visible, "Ending dialog did not open")
 	check(game.get_node("%JudgeButton").disabled, "Oaths enabled after ending")
 	for button in game.get_node("%Actions").get_children():
@@ -91,6 +99,25 @@ func run() -> void:
 	game.get_node("%RulesDialog").hide()
 	game.get_node("%ResetButton").pressed.emit()
 	check(game.state.turn == 0 and game.state.cities[0].oath == null, "Reset failed")
+	game.get_node("%LegacyLaws").get_child(2).pressed.emit()
+	check(game.pending.get("type") == "memory", "Debt law quick preview failed")
+	check(game.state.cities[0].oath == null, "Law shortcut skipped confirmation")
+	game.confirm_oath()
+	for id in ["forge", "forest", "farm", "investigate", "forge", "investigate"]:
+		action_button(id).pressed.emit()
+	check(game.state.turn == 6 and game.state.cities[0].barrier == 6, "Debt route could not build barrier")
+	check(game.state.cities[0].barrierResults[0].title == "共誓", "Debt route outcome mismatch")
+	await create_timer(0.4).timeout
+	await capture("debt-route")
+	game.select_city("ember")
+	check(action_button("forge").disabled, "Finished barrier can still be repaired")
+	game.reset_world()
+	game.state.cities[0].trade = 0
+	game.render()
+	check(action_button("forge").disabled and action_button("forge").tooltip_text.contains("资源不足"), "Missing payment reason")
+	game.perform("forge")
+	check(game.state.turn == 0, "Failed payment advanced turn")
+	game.reset_world()
 	root.size = Vector2i(1200, 880)
 	await process_frame
 	await capture("compact")
