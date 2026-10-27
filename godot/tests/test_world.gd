@@ -11,6 +11,7 @@ func frame(s: Dictionary) -> Dictionary:
 		"cities": s.cities, "events": s.events, "interactions": s.get("interactions", []),
 		"links": s.get("links", []), "historyCount": s.history.size(),
 		"lastAction": s.get("lastAction"),
+		"seed": s.seed, "truces": s.truces,
 		"historyTail": s.history.filter(func(h): return not h.has("cities")).slice(-5), "ending": s.ending}
 
 func check(value: bool, message: String) -> void:
@@ -45,7 +46,7 @@ func run() -> void:
 		return
 	var scenarios = JSON.parse_string(FileAccess.get_file_as_string(path))
 	for scenario in scenarios:
-		var s = rules.initial()
+		var s = rules.initial(int(scenario.seed))
 		var last_before = s
 		compare(frame(s), scenario.frames[0], scenario.name + "/initial")
 		for i in scenario.ops.size():
@@ -54,10 +55,11 @@ func run() -> void:
 			match op.kind:
 				"oath": next = WorldRules.set_oath(s, WorldRules.parse_oath(op.text))
 				"patch": WorldRules.city(s, op.city).merge(op.values, true)
+				"worldPatch": s.merge(op.values.duplicate(true), true)
 				"ai": next = WorldRules.apply_ai_turn(s, op.data, last_before)
 				_:
 					last_before = s
-					next = rules.advance(s, op.action)
+					next = rules.advance(s, op.action, op.get("targetId", ""))
 			if op.has("expectedError"):
 				check(next.get("error") == op.expectedError, scenario.name + ": rejection mismatch " + str(next.get("error")))
 			else:

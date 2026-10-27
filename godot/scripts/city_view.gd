@@ -1,21 +1,33 @@
 extends Node2D
 signal selected(id: String)
 var city_id: String
+var plates: Array[Polygon2D] = []
+var outlines: Array[Line2D] = []
 
 func _ready() -> void:
-	var outline: PackedVector2Array = $Plate.polygon.duplicate()
-	if not outline.is_empty():
-		outline.append(outline[0])
-	$Outline.points = outline
+	for i in 4:
+		var plate = $Plate if i == 0 else $Plate.duplicate()
+		var outline = $Outline if i == 0 else $Outline.duplicate()
+		if i > 0:
+			add_child(plate)
+			add_child(outline)
+		plates.append(plate)
+		outlines.append(outline)
 	$LabelRoot/Button.pressed.connect(func(): selected.emit(city_id))
 
-func configure(c: Dictionary, definition: CityDefinition, index: int, current: bool, chosen: bool) -> void:
+func configure(c: Dictionary, definition: CityDefinition, _index: int, current: bool, chosen: bool) -> void:
 	city_id = c.id
 	set_meta("barrier_complete", c.barrier >= 6)
-	$Plate.color = Color(definition.tint, 0.38 if not chosen else 0.65)
-	$Plate.rotation = index * 0.72
-	$Outline.rotation = $Plate.rotation
-	$Outline.default_color = Color("e2bd79") if chosen else Color(definition.tint, 0.8)
+	var polygons = TerritoryRules.polygons({"x": 0.0, "y": 0.0, "territory": c.territory})
+	for i in 4:
+		var points = TerritoryRules.packed(polygons[i])
+		plates[i].polygon = points
+		plates[i].rotation = 0
+		plates[i].color = Color(definition.tint, 0.30 if not chosen else 0.48)
+		points.append(points[0])
+		outlines[i].points = points
+		outlines[i].rotation = 0
+		outlines[i].default_color = Color("e2bd79") if chosen else Color(definition.tint, 0.8)
 	$Marker.color = Color("edce8c") if current else Color("b6d7ce")
 	$Halo.visible = current
 	queue_redraw()

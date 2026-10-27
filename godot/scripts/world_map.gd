@@ -7,8 +7,14 @@ var world_scale = 1.0
 var origin = Vector2.ZERO
 var animation: Tween
 var display_positions: Dictionary = {}
+var relations: Array = []
+var overlap_layer: Node2D
 
 func _ready() -> void:
+	overlap_layer = Node2D.new()
+	overlap_layer.name = "OverlapRegions"
+	overlap_layer.z_index = 5
+	$World.add_child(overlap_layer)
 	resized.connect(_layout)
 	_layout()
 
@@ -21,6 +27,7 @@ func _layout() -> void:
 
 func update_world(s: Dictionary, selected: String, config: WorldConfig, animate: bool = true) -> void:
 	state = s
+	relations = WorldRules.connections(s)
 	if animation:
 		animation.kill()
 	animation = null
@@ -59,6 +66,19 @@ func update_world(s: Dictionary, selected: String, config: WorldConfig, animate:
 		labels.append(label)
 		view.set_label_offset(label - destination)
 		view.z_index = 2 if c.id == selected else 1
+	for child in overlap_layer.get_children():
+		child.queue_free()
+	for pair in relations:
+		for polygon in pair.overlaps:
+			var region = Polygon2D.new()
+			region.polygon = TerritoryRules.packed(polygon)
+			region.color = Color(0.89, 0.74, 0.45, 0.6) if pair.type == "休战" else Color(0.9, 0.37, 0.32, 0.6)
+			overlap_layer.add_child(region)
+	overlap_layer.visible = animation == null
+	if animation:
+		animation.finished.connect(func():
+			overlap_layer.show()
+			queue_redraw())
 	queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -73,12 +93,13 @@ func _draw() -> void:
 		draw_line(origin + Vector2(x, 0) * world_scale, origin + Vector2(x, 600) * world_scale, ink)
 	for y in range(0, 601, 50):
 		draw_line(origin + Vector2(0, y) * world_scale, origin + Vector2(1000, y) * world_scale, ink)
-	for pair in WorldRules.connections(state):
+	for pair in relations:
 		if pair.type == "隔绝":
 			continue
 		var a: Vector2 = views[pair.a].position * world_scale + origin
 		var b: Vector2 = views[pair.b].position * world_scale + origin
-		draw_line(a, b, Color(0.53, 0.75, 0.59, 0.5) if pair.type == "邻接" else Color(0.48, 0.69, 0.78, 0.35), 1.3, true)
+		var color = Color(0.92, 0.39, 0.34, 0.6) if pair.type == "冲突" else (Color(0.89, 0.75, 0.47, 0.55) if pair.type == "休战" else Color(0.48, 0.69, 0.78, 0.4))
+		draw_line(a, b, color, 1.3, true)
 	for c in state.cities:
 		var start = Vector2(c.origin.x, c.origin.y) * world_scale + origin
 		var end: Vector2 = views[c.id].position * world_scale + origin

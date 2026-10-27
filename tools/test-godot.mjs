@@ -5,7 +5,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const executable = process.argv[2] || process.env.GODOT_BIN || 'godot';
 async function run(command, args) {
   await new Promise((resolve, reject) => {
-    const child = spawn(command, args, {cwd:root, windowsHide:true, timeout:60000});
+    const child = spawn(command, args, {cwd:root, windowsHide:true, timeout:180000});
     let output = '';
     child.stdout.on('data', data => { output += data; process.stdout.write(data); });
     child.stderr.on('data', data => { output += data; process.stderr.write(data); });

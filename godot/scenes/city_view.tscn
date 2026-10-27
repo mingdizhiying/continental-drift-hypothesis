@@ -11,11 +11,11 @@ rotation = 0.785398
 color = Color(0.89, 0.75, 0.46, 0.24)
 
 [node name="Plate" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-84, -22, -59, -55, -25, -49, 1, -72, 37, -56, 42, -30, 79, -10, 65, 20, 74, 46, 30, 57, 6, 43, -34, 63, -64, 32)
+polygon = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32)
 color = Color(0.4, 0.6, 0.5, 0.45)
 
 [node name="Outline" type="Line2D" parent="."]
-points = PackedVector2Array(-84, -22, -59, -55, -25, -49, 1, -72, 37, -56, 42, -30, 79, -10, 65, 20, 74, 46, 30, 57, 6, 43, -34, 63, -64, 32, -84, -22)
+points = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32, -32, -32)
 width = 1.5
 default_color = Color(0.5, 0.7, 0.6, 0.8)
 antialiased = true

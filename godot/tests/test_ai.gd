@@ -20,6 +20,7 @@ func run() -> void:
 		quit(1)
 		return
 	game = load("res://scenes/main.tscn").instantiate()
+	game.initial_seed = 123
 	root.add_child(game)
 	await process_frame
 	game.get_node("%AIEnabled").set_pressed_no_signal(true)

@@ -1,5 +1,7 @@
 extends PanelContainer
 @export var config: WorldConfig
+## -1 generates a new seed. Set an integer to replay the same initial territories.
+@export var initial_seed: int = -1
 var rules: WorldRules
 var state: Dictionary
 var selected: String
@@ -32,6 +34,10 @@ func _ready() -> void:
 		%CityTabs.add_child(button)
 		city_buttons[c.id] = button
 	%WorldMap.city_selected.connect(select_city)
+	%MediateButton.pressed.connect(func():
+		var index = %DiplomacyTarget.selected
+		if index >= 0 and not %DiplomacyTarget.disabled:
+			perform("mediate", str(%DiplomacyTarget.get_item_metadata(index))))
 	%JudgeButton.pressed.connect(judge_oath)
 	%ConfirmButton.pressed.connect(confirm_oath)
 	%OathInput.text_changed.connect(clear_pending)
@@ -59,7 +65,7 @@ func clear_pending() -> void:
 func reset_world() -> void:
 	if busy:
 		return
-	state = rules.initial()
+	state = rules.initial(initial_seed)
 	selected = state.current
 	clear_pending()
 	%OathInput.text = ""
@@ -85,6 +91,7 @@ func render(animate: bool = false) -> void:
 	%CityName.text = c.name
 	%CityRole.text = "当前治理" if c.id == state.current else "远方城市 · 仅查看"
 	%CityDescription.text = "%s · 曾治理%d次\n位置 (%d, %d) · 距当前城 %d" % [c.lore, c.visits, round(c.x), round(c.y), round(WorldRules.distance(current, c))]
+	render_diplomacy(c, can_act)
 	var metric_nodes = {"food": %Food, "peace": %Peace, "trade": %Trade, "ecology": %Ecology}
 	for key in metric_nodes:
 		metric_nodes[key].get_node("Title").text = "%s  %d / 100" % [WorldRules.METRICS[key], c[key]]
@@ -190,14 +197,14 @@ func confirm_oath() -> void:
 	%OathInput.text = ""
 	render()
 
-func perform(action: String) -> void:
+func perform(action: String, target_id: String = "") -> void:
 	if busy or state.ended or selected != state.current:
 		return
 	busy = true
 	clear_pending()
 	render()
 	var before = state
-	var next = rules.advance(state, action)
+	var next = rules.advance(state, action, target_id)
 	if next.has("error"):
 		%AIStatus.text = next.error
 		busy = false
@@ -227,6 +234,37 @@ func perform(action: String) -> void:
 	render(true)
 	if state.ended:
 		show_ending()
+
+func render_diplomacy(c: Dictionary, can_act: bool) -> void:
+	%TerritoryStatus.text = "%s 型 · 朝向 %.1f° · %s %.2f°/轮\n世界种子 %d" % [c.territory.shape, c.territory.angle, "顺时针" if c.territory.spin > 0 else "逆时针", abs(c.territory.spin), state.seed]
+	var lines: Array[String] = []
+	for pair in WorldRules.connections(state):
+		if pair.a != c.id and pair.b != c.id:
+			continue
+		var other = WorldRules.city(state, pair.b if pair.a == c.id else pair.a)
+		var line = "%s：%s · 间距 %.2f 格" % [other.name, pair.type, pair.gap / TerritoryRules.CELL]
+		if pair.overlapArea > 0:
+			line += " · 重叠 %.1f%%" % (pair.overlapRatio * 100)
+		if pair.has("truceUntil"):
+			line += " · 休战至第%d轮" % pair.truceUntil
+		lines.append(line)
+	%Relations.text = "\n".join(lines)
+	var old_target = ""
+	if %DiplomacyTarget.selected >= 0:
+		old_target = str(%DiplomacyTarget.get_item_metadata(%DiplomacyTarget.selected))
+	%DiplomacyTarget.clear()
+	var targets = WorldRules.diplomacy_targets(state)
+	for target in targets:
+		var index = %DiplomacyTarget.item_count
+		%DiplomacyTarget.add_item(target.name)
+		%DiplomacyTarget.set_item_metadata(index, target.id)
+		if target.id == old_target:
+			%DiplomacyTarget.select(index)
+	if targets.is_empty():
+		%DiplomacyTarget.add_item("当前没有可调停的领地冲突")
+	%DiplomacyTarget.disabled = not can_act or targets.is_empty()
+	%MediateButton.disabled = not can_act or targets.is_empty() or c.trade < WorldRules.DIPLOMACY_COST
+	%DiplomacyHint.text = "繁荣不足，需8繁荣。" if c.trade < WorldRules.DIPLOMACY_COST else "从本次结算起双方休战三轮，不产生彼此的争夺和贸易，第三城互动照常。"
 
 static func valid_ending(data: Dictionary) -> bool:
 	if not data.get("title") is String or data.title.length() > 100 or not data.get("text") is String or data.text.length() > 6000 or not data.get("evidence") is Array or data.evidence.size() > 20:
@@ -260,7 +298,7 @@ func show_ending() -> void:
 	%EndingDialog.popup_centered(Vector2i(800, 620))
 
 func show_rules() -> void:
-	var text = "[color=#e2bd79][font_size=24]城市终将远行，你留下什么不变？[/font_size][/color]\n\n每次行动推进一轮；所有城市漂移并演化。每六轮自动前往最近的其他城市，允许返回旧城，第六十轮结算。大陆板块允许重叠，距离按城市中心计算。\n\n[color=#e2bd79]城市治理[/color]\n"
+	var text = "[color=#e2bd79][font_size=24]城市终将远行，你留下什么不变？[/font_size][/color]\n\n每次有效行动推进一轮，所有城市漂移与旋转；查看和立誓不消耗轮次。每六轮按城市中心距离迁往最近的其他城市，允许返回旧城，第六十轮结算。每局随机四格板块、朝向和旋转速度，允许重叠穿过，不阻挡或合并。\n\n[color=#e2bd79]城市治理[/color]\n"
 	for action in config.actions:
 		text += "%s：支付%s，获得%s。\n" % [escape_bb(action.title), CityEconomy.describe(action.cost, "−") if not action.cost.is_empty() else "无", CityEconomy.describe(action.gain, "+") if not action.gain.is_empty() else "无直接收益"]
 	text += "\n所有行动先完整支付，资源不足、重复公开秘密或屏障已完成时不耗回合。每轮基础粮食消耗2。屏障6且安定≥60、粮食≥20为共誓，否则为孤光；未完成为长夜。每六轮记录结果，第六十轮汇总十次任期。禁火、禁谎、偿债与五种守护共用唯一誓约槽，按轮初条件生效。守护不返还主动支付的成本。\n"
@@ -270,6 +308,6 @@ func show_rules() -> void:
 	text += "\n[color=#e2bd79]十种市民事件[/color]\n每轮在刚治理的城市触发一个；按以下顺序选择首个满足条件且未发生的事件。\n"
 	for e in config.events:
 		text += "%s：%s；%s。\n" % [escape_bb(e.title), escape_bb(e.condition), "可重复" if e.repeat else "每城最多一次"]
-	text += "\n[color=#e2bd79]距离关系与 AI[/color]\n距离 <180 为邻接，<330 为贸易，其余隔绝。没有碰撞或合并规则。\n默认完整离线运行。真实 AI 需另外启动仓库中的 Node.js 代理，密钥只保存在代理端；请求失败会明确回退。\n\n[color=#e2bd79]进度与导出[/color]\n导出 JSON 包含全部行动、誓约、迁城和逐轮快照。此版与原型一致，关闭或重开世界会清空进度，暂不支持读档。"
+	text += "\n[color=#e2bd79]领地关系、外交与 AI[/color]\n每格64单位，按旋转多边形的实际重叠面积和边界间距判断关系。重叠争夺双方粮食、安定和繁荣；未重叠且间距不超过一格时贸易，远离所有领地时隔绝。贸易每城每轮合计封顶4粮食、8繁荣。\n外交调停需8繁荣并推进一轮，选择当前重叠且未休战的其他城市；从本轮起休战三轮，双方不争夺、不贸易，与第三城互动照常。\n默认完整离线运行。真实 AI 需启动 tools/godot-proxy.mjs，密钥只保存在代理端；请求失败会明确回退。\n\n[color=#e2bd79]进度与导出[/color]\n导出 JSON 包含种子、领地形状/角度/角速度、外交协议、支付成本、任期结果、全部行动和逐轮快照。关闭或重开世界会清空进度，暂不支持读档。"
 	%RulesDialog.get_node("Content").text = text
 	%RulesDialog.popup_centered(Vector2i(780, 660))

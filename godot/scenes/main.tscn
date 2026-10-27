@@ -134,7 +134,7 @@ text = "漂移中的世界"
 [node name="Hint" type="Label" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout/MapHeading"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "混沌之海  /  可重叠板块"
+text = "每格64 · 随行动漂移与旋转"
 
 [node name="WorldMap" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout" instance=ExtResource("Map")]
 unique_name_in_owner = true
@@ -148,7 +148,7 @@ theme_override_constants/separation = 6
 [node name="Legend" type="Label" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "金色：当前治理  ·  绿色：邻接  ·  蓝色：贸易  ·  虚线：起点位移"
+text = "红色：重叠争夺  ·  金色交叠：休战  ·  蓝色：贸易  ·  虚线：起点位移"
 autowrap_mode = 2
 
 [node name="EchoPanel" type="PanelContainer" parent="Margin/Layout/Body/MapColumn"]
@@ -302,6 +302,38 @@ text = "禁谎"
 layout_mode = 2
 size_flags_horizontal = 3
 text = "偿债"
+
+[node name="DiplomacyTitle" type="Label" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+layout_mode = 2
+theme_type_variation = &"Heading"
+text = "领地关系与外交"
+
+[node name="TerritoryStatus" type="Label" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="Relations" type="Label" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="DiplomacyTarget" type="OptionButton" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MediateButton" type="Button" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "外交调停 · 支付8繁荣 · 休战三轮"
+
+[node name="DiplomacyHint" type="Label" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 2
 
 [node name="OathHeading" type="Label" parent="Margin/Layout/Body/SidePanel/Scroll/SideLayout"]
 layout_mode = 2

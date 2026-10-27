@@ -30,6 +30,7 @@ func capture(name: String) -> void:
 func run() -> void:
 	root.size = Vector2i(1440, 960)
 	game = load("res://scenes/main.tscn").instantiate()
+	game.initial_seed = 123
 	root.add_child(game)
 	await process_frame
 	await process_frame
@@ -103,6 +104,15 @@ func run() -> void:
 	check(game.pending.get("type") == "memory", "Debt law quick preview failed")
 	check(game.state.cities[0].oath == null, "Law shortcut skipped confirmation")
 	game.confirm_oath()
+	for i in game.state.cities.size():
+		var c = game.state.cities[i]
+		c.territory = {"shape": "O", "angle": 0.0, "spin": 0.0}
+		c.x = 400.0 if i == 0 else (560.0 if i == 1 else 850.0)
+		c.y = 300.0 if i < 2 else 450.0
+		c.vx = -sin(0.2 + c.origin.x) * 1.1
+		c.vy = -cos(1.0 / 6.0 + c.origin.y) * 1.1
+		c.eventSeen = ["hunger", "unrest", "seed", "market", "refugees", "feast", "craft", "isolation", "torch"]
+	game.render()
 	for id in ["forge", "forest", "farm", "investigate", "forge", "investigate"]:
 		action_button(id).pressed.emit()
 	check(game.state.turn == 6 and game.state.cities[0].barrier == 6, "Debt route could not build barrier")
@@ -117,6 +127,19 @@ func run() -> void:
 	check(action_button("forge").disabled and action_button("forge").tooltip_text.contains("资源不足"), "Missing payment reason")
 	game.perform("forge")
 	check(game.state.turn == 0, "Failed payment advanced turn")
+	game.reset_world()
+	for i in 2:
+		var c = game.state.cities[i]
+		c.x = 400.0
+		c.y = 300.0
+		c.territory = {"shape": "O", "angle": 0.0, "spin": 0.0}
+	game.render()
+	check(not game.get_node("%MediateButton").disabled, "Diplomacy disabled for overlap")
+	game.get_node("%MediateButton").pressed.emit()
+	check(game.state.turn == 1 and not WorldRules.truce_for(game.state, "ember", "grove").is_empty(), "Diplomacy button failed")
+	check(game.state.lastAction.cost.trade == 8, "Diplomacy payment missing")
+	await create_timer(0.4).timeout
+	await capture("truce")
 	game.reset_world()
 	root.size = Vector2i(1200, 880)
 	await process_frame

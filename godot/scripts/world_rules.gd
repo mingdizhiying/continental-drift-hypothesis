@@ -4,6 +4,8 @@ extends RefCounted
 const LIMIT = 60
 const TENURE = 6
 const DRIFT_SPEED = 4
+const DIPLOMACY_COST = 8
+const TRUCE_TURNS = 3
 const METRICS = {"food": "粮食", "peace": "安定", "trade": "繁荣", "ecology": "生态"}
 const OATH_TYPES = {"anchor": "固定城市位置", "food": "守护粮食储备", "peace": "守护社会安定", "trade": "守护贸易繁荣", "ecology": "守护生态", "fire": "城内不得燃火", "silence": "城民不得说谎", "memory": "所有债务必须偿还"}
 const OATH_RULES = {
@@ -20,17 +22,22 @@ var config: WorldConfig
 func _init(data: WorldConfig = null) -> void:
 	config = data if data != null else load("res://data/world.tres")
 
-func initial() -> Dictionary:
+func initial(seed: int = -1) -> Dictionary:
+	if seed < 0:
+		seed = randi()
+	seed = seed & 0xffffffff
+	var rng = TerritoryRules.RandomStream.new(seed)
 	var cities: Array = []
 	for i in config.cities.size():
 		var d = config.cities[i]
 		cities.append({"id": d.id, "name": d.city_name, "x": float(d.start.x), "y": float(d.start.y),
 			"origin": {"x": float(d.start.x), "y": float(d.start.y)},
+			"territory": TerritoryRules.create_territory(rng),
 			# Store rule velocities as decimal doubles, avoiding Vector2 float32 drift.
 			"vx": snappedf(d.velocity.x, 0.000001), "vy": snappedf(d.velocity.y, 0.000001),
 			"lore": d.lore, "food": d.food, "peace": d.peace, "trade": d.trade,
 			"ecology": d.ecology, "barrier": 0, "revealed": false, "barrierResults": [], "oath": null, "visits": 1 if i == 0 else 0, "eventSeen": []})
-	return {"turn": 0, "current": cities[0].id, "visited": [cities[0].id], "ended": false,
+	return {"seed": seed, "truces": [], "turn": 0, "current": cities[0].id, "visited": [cities[0].id], "ended": false,
 		"ending": null, "events": [], "history": [{"turn": 0, "kind": "开端",
 		"text": "你成为造物主的使者，抵达余烬城。每座城市都在漂移，唯有誓约可能留下不变之物。"}], "cities": cities}
 
@@ -64,10 +71,34 @@ static func connections(s: Dictionary) -> Array:
 		for j in range(i + 1, s.cities.size()):
 			var a = s.cities[i]
 			var b = s.cities[j]
-			var d = distance(a, b)
-			links.append({"a": a.id, "b": b.id, "distance": int(floor(d + 0.5)),
-				"type": "邻接" if d < 180 else ("贸易" if d < 330 else "隔绝")})
+			var pair = TerritoryRules.relation(a, b).duplicate()
+			pair.merge({"a": a.id, "b": b.id, "distance": int(floor(distance(a, b) + 0.5))})
+			var truce = truce_for(s, a.id, b.id)
+			if not truce.is_empty():
+				pair.type = "休战"
+				pair.truceUntil = truce.until
+			links.append(pair)
 	return links
+
+static func truce_for(s: Dictionary, a: String, b: String) -> Dictionary:
+	for truce in s.get("truces", []):
+		if truce.until >= s.turn and ((truce.a == a and truce.b == b) or (truce.a == b and truce.b == a)):
+			return truce
+	return {}
+
+static func diplomacy_targets(s: Dictionary) -> Array:
+	var targets: Array = []
+	var current = city(s, s.current)
+	for c in s.cities:
+		if c.id != s.current and TerritoryRules.relation(current, c).type == "冲突" and truce_for(s, s.current, c.id).is_empty():
+			targets.append(c)
+	return targets
+
+static func isolated(s: Dictionary, c: Dictionary) -> bool:
+	for other in s.cities:
+		if other.id != c.id and TerritoryRules.relation(c, other).gap <= TerritoryRules.CELL:
+			return false
+	return true
 
 static func parse_oath(raw: String) -> Dictionary:
 	var text = raw.strip_edges()
@@ -144,75 +175,101 @@ static func event_matches(id: String, c: Dictionary, s: Dictionary) -> bool:
 		"hunger": return c.food < 25
 		"unrest": return c.peace < 35
 		"seed": return c.ecology >= 70
-		"market": return distance(c, nearest(s, c.id)) < 330
+		"market":
+			for pair in connections(s):
+				if (pair.a == c.id or pair.b == c.id) and pair.type == "贸易":
+					return true
+			return false
 		"refugees": return nearest(s, c.id).peace < 40
 		"feast": return c.food >= 65 and c.peace >= 60
 		"craft": return c.trade >= 60
-		"isolation": return distance(c, nearest(s, c.id)) > 330
+		"isolation": return isolated(s, c)
 		"torch": return oath_active(c)
 		"watch": return true
 	return false
 
-func advance(state: Dictionary, action: String) -> Dictionary:
+func advance(state: Dictionary, action: String, target_id: String = "") -> Dictionary:
 	if state.ended:
 		return {"error": "世界已结算。"}
 	var s = state.duplicate(true)
 	var before: Array = s.cities.duplicate(true)
 	var old_links = connections(s)
 	var current = city(s, s.current)
-	var result = CityEconomy.apply(current, action_spec(current, action))
+	var result: Dictionary
+	if action == "mediate":
+		var target: Dictionary = {}
+		for candidate in diplomacy_targets(s):
+			if candidate.id == target_id:
+				target = candidate
+		if target.is_empty():
+			return {"error": "请选择当前领地重叠且未休战的其他城市"}
+		if current.trade < DIPLOMACY_COST:
+			return {"error": "资源不足：外交调停需要8繁荣"}
+		current.trade -= DIPLOMACY_COST
+		s.truces = s.truces.filter(func(t): return t.until >= s.turn)
+		s.truces.append({"a": current.id, "b": target.id, "from": s.turn + 1, "until": s.turn + TRUCE_TURNS})
+		result = {"cost": {"trade": DIPLOMACY_COST}, "text": "与%s外交调停（繁荣−8），第%d至%d轮双方休战，暂停彼此冲突与贸易" % [target.name, s.turn + 1, s.turn + TRUCE_TURNS]}
+	else:
+		result = CityEconomy.apply(current, action_spec(current, action))
 	if result.has("error"):
 		return result
 	s.turn += 1
+	s.truces = s.truces.filter(func(t): return t.until >= s.turn)
 	s.lastAction = {"turn": s.turn, "city": current.id, "action": action, "cost": result.cost}
+	if not target_id.is_empty():
+		s.lastAction.targetId = target_id
 	var action_entry = {"turn": s.turn, "kind": "行动", "city": current.id, "cost": result.cost, "text": "你在%s%s。" % [current.name, result.text]}
 	s.history.append(action_entry)
 	for c in s.cities:
+		c.territory.angle = fmod(c.territory.angle + c.territory.spin + 360, 360)
 		var old = city({"cities": before}, c.id)
 		if not oath_active(old) or c.oath.type != "anchor":
 			c.x += (c.vx + sin(s.turn / 5.0 + c.origin.x) * 1.1) * DRIFT_SPEED
 			c.y += (c.vy + cos(s.turn / 6.0 + c.origin.y) * 1.1) * DRIFT_SPEED
-			if c.x < 65 or c.x > 935:
+			var radius = TerritoryRules.radius(c)
+			if c.x < radius or c.x > 1000 - radius:
 				c.vx *= -1
-				c.x = clampf(c.x, 65, 935)
-			if c.y < 65 or c.y > 535:
+				c.x = clampf(c.x, radius, 1000 - radius)
+			if c.y < radius or c.y > 600 - radius:
 				c.vy *= -1
-				c.y = clampf(c.y, 65, 535)
+				c.y = clampf(c.y, radius, 600 - radius)
 		change(c, {"food": -2})
 		if oath_active(old) and not CityEconomy.LEGACY_LAWS.has(c.oath.type):
 			change(c, {"food": -1} if c.oath.type == "peace" else ({"ecology": -1} if c.oath.type == "trade" else {"trade": -1}))
 	s.links = connections(s)
 	s.interactions = []
-	var trade_income: Dictionary = {}
+	var income: Dictionary = {}
 	for c in s.cities:
-		trade_income[c.id] = 0
+		income[c.id] = {"food": 0, "trade": 0}
 	for i in s.links.size():
 		var pair = s.links[i]
 		var a = city(s, pair.a)
 		var b = city(s, pair.b)
 		var old = old_links[i]
 		var note = ""
-		if pair.type == "邻接":
-			if min(a.peace, b.peace) < 40:
-				change(a, {"peace": -1})
-				change(b, {"peace": -1})
-				note = "边界摩擦：邻城因不安定互相猜疑"
-			else:
-				change(a, {"food": 1})
-				change(b, {"food": 1})
-				grant_trade(a, trade_income)
-				grant_trade(b, trade_income)
-				note = "邻接合作：交换粮食与工艺"
+		if pair.type == "冲突":
+			var severity = mini(4, 1 + int(floor(pair.overlapRatio * 4)))
+			for c in [a, b]:
+				change(c, {"food": -severity, "peace": -severity, "trade": -1})
+			note = "领地资源争夺：重叠%.1f%%，双方粮食−%d、安定−%d、繁荣−1" % [pair.overlapRatio * 100, severity, severity]
 		elif pair.type == "贸易":
-			grant_trade(a, trade_income)
-			grant_trade(b, trade_income)
-			note = "商路互通：距离允许商队往来"
+			for c in [a, b]:
+				var food = mini(2, 4 - income[c.id].food)
+				var trade = mini(4, 8 - income[c.id].trade)
+				change(c, {"food": food, "trade": trade})
+				income[c.id].food += food
+				income[c.id].trade += trade
+			note = "近邻大量贸易：双方粮食+2、繁荣+4（每城每轮贸易合计上限粮食+4、繁荣+8）"
+		elif pair.type == "休战":
+			note = "外交休战至第%d轮（含），双方暂停冲突和贸易" % pair.truceUntil
 		if old.type != pair.type:
-			log_entry(s, "距离变化", "%s↔%s：%s→%s（%d→%d）。%s" % [a.name, b.name, old.type, pair.type, old.distance, pair.distance, note if not note.is_empty() else "旧商路断开。"])
+			log_entry(s, "距离变化", "%s↔%s：%s→%s；领地间距%.1f。" % [a.name, b.name, old.type, pair.type, pair.gap])
 		if not note.is_empty():
-			s.interactions.append("%s↔%s，距离%d：%s。" % [a.name, b.name, pair.distance, note])
+			var text = "%s↔%s：%s。" % [a.name, b.name, note]
+			s.interactions.append(text)
+			s.history.append({"turn": s.turn, "kind": "领地互动", "pair": [a.id, b.id], "type": pair.type, "gap": pair.gap, "overlapRatio": pair.overlapRatio, "text": text})
 	for c in s.cities:
-		if distance(c, nearest(s, c.id)) > 330:
+		if isolated(s, c):
 			change(c, {"trade": -1, "peace": -1})
 	for e in config.events:
 		if (e.repeat or not current.eventSeen.has(e.id)) and event_matches(e.predicate, current, s):
@@ -244,11 +301,6 @@ func advance(state: Dictionary, action: String) -> Dictionary:
 func action_spec(c: Dictionary, action: String) -> Dictionary:
 	return CityEconomy.spec(config, action, str(c.oath.type) if oath_active(c) else "")
 
-static func grant_trade(c: Dictionary, income: Dictionary) -> void:
-	if income[c.id] < 2:
-		change(c, {"trade": 1})
-		income[c.id] += 1
-
 static func local_ending(s: Dictionary) -> Dictionary:
 	var values: Dictionary = {}
 	for key in METRICS:
@@ -265,7 +317,7 @@ static func local_ending(s: Dictionary) -> Dictionary:
 	text += "建设与耕种消耗的林地成为未来的代价。" if values.ecology < 35 else "你留下的%d次誓约与%d次林地修复，是这段历史中可追溯的守护行动。" % [vows.size(), restorations]
 	text += "许多城市仍在寻找足够的食物。" if values.food < 25 else "粮食储备决定了城市能否继续等待下一个邻居。"
 	var evidence: Array = []
-	for h in s.history.filter(func(h): return h.kind == "屏障结果") + vows.slice(0, 6) + s.history.filter(func(h): return h.kind == "迁城").slice(-3) + s.history.filter(func(h): return h.kind == "距离变化").slice(-3) + actions.slice(-3):
+	for h in s.history.filter(func(h): return h.kind == "屏障结果") + vows.slice(0, 6) + s.history.filter(func(h): return h.kind == "迁城").slice(-3) + s.history.filter(func(h): return h.kind == "领地互动").slice(-3) + s.history.filter(func(h): return h.kind == "距离变化").slice(-3) + actions.slice(-3):
 		evidence.append("第%d轮：%s" % [h.turn, h.text])
 	var barriers: Array = []
 	for c in s.cities:
