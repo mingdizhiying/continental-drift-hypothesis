@@ -257,6 +257,8 @@ predicate = "watch"
 
 [resource]
 script = ExtResource("World")
+fog_enabled = true
+beacon_cost = {"trade": 20, "food": 5, "ecology": 3}
 cities = Array[ExtResource("City")]([SubResource("ember"), SubResource("grove"), SubResource("tide"), SubResource("archive"), SubResource("grain"), SubResource("mist")])
 actions = Array[ExtResource("Action")]([SubResource("farm"), SubResource("build"), SubResource("restore"), SubResource("investigate"), SubResource("forest"), SubResource("forge"), SubResource("reveal"), SubResource("observe")])
 events = Array[ExtResource("Event")]([SubResource("hunger"), SubResource("unrest"), SubResource("seed"), SubResource("market"), SubResource("refugees"), SubResource("feast"), SubResource("craft"), SubResource("isolation"), SubResource("torch"), SubResource("watch")])

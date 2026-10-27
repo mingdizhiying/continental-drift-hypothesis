@@ -7,8 +7,15 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func frame(s: Dictionary) -> Dictionary:
+	# Fog/beacons extend the Godot game. Unlit beacons must not change the
+	# pinned v0.3.2 simulation; compare all original city fields unchanged.
+	var cities: Array = []
+	for source in s.cities:
+		var c = source.duplicate(true)
+		c.erase("beacon")
+		cities.append(c)
 	return {"turn": s.turn, "current": s.current, "visited": s.visited, "ended": s.ended,
-		"cities": s.cities, "events": s.events, "interactions": s.get("interactions", []),
+		"cities": cities, "events": s.events, "interactions": s.get("interactions", []),
 		"links": s.get("links", []), "historyCount": s.history.size(),
 		"lastAction": s.get("lastAction"),
 		"seed": s.seed, "truces": s.truces,

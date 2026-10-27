@@ -8,7 +8,7 @@ func _ready() -> void:
 static func escaped(text: String) -> String:
 	return text.replace("[", "[lb]")
 
-func present(state: Dictionary, bounds: Vector2, resolution: String = "") -> void:
+func present(state: Dictionary, bounds: Vector2, resolution: String = "", fog_enabled: bool = true) -> void:
 	if state.turn == 0 or visible:
 		return
 	title = "第%d轮 · 世界回响" % state.turn
@@ -29,7 +29,7 @@ func present(state: Dictionary, bounds: Vector2, resolution: String = "") -> voi
 		effects = "，".join(changes) if not changes.is_empty() else "无数值变化"
 		text += "\n[b]%s · %s[/b]\n%s\n触发条件：%s\n影响：%s\n" % [escaped(event.city), escaped(event.name), escaped(event.text), escaped(event.condition), effects]
 	text += "\n[color=#e2bd79]城市关系切换[/color]\n"
-	var records = state.history.filter(func(h): return h.turn == state.turn)
+	var records = WorldVision.history_for_player(state, fog_enabled).filter(func(h): return h.turn == state.turn)
 	var changes = records.filter(func(h): return h.kind == "距离变化")
 	if changes.is_empty():
 		text += "\n本轮没有城市关系切换。\n"
@@ -51,7 +51,7 @@ func present(state: Dictionary, bounds: Vector2, resolution: String = "") -> voi
 			text += "\n第六十轮已结束。关闭本轮回响后，主界面顶部将显示世界结局与六城屏障结果。\n"
 	%EchoBody.text = text
 	var interactions: Array[String] = []
-	for line in state.get("interactions", []):
+	for line in WorldVision.interactions_for_player(state, fog_enabled):
 		interactions.append(escaped(line))
 	%InteractionSummary.text = "\n\n".join(interactions) if not interactions.is_empty() else "本轮没有贸易、争夺或休战互动。"
 	popup_centered(Vector2i(minf(840, bounds.x - 48), minf(720, bounds.y - 48)))

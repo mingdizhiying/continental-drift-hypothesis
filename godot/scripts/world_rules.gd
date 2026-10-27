@@ -36,8 +36,8 @@ func initial(seed: int = -1) -> Dictionary:
 			# Store rule velocities as decimal doubles, avoiding Vector2 float32 drift.
 			"vx": snappedf(d.velocity.x, 0.000001), "vy": snappedf(d.velocity.y, 0.000001),
 			"lore": d.lore, "food": d.food, "peace": d.peace, "trade": d.trade,
-			"ecology": d.ecology, "barrier": 0, "revealed": false, "barrierResults": [], "oath": null, "visits": 1 if i == 0 else 0, "eventSeen": []})
-	return {"seed": seed, "truces": [], "turn": 0, "current": cities[0].id, "visited": [cities[0].id], "ended": false,
+			"ecology": d.ecology, "barrier": 0, "revealed": false, "barrierResults": [], "beacon": null, "oath": null, "visits": 1 if i == 0 else 0, "eventSeen": []})
+	return {"seed": seed, "truces": [], "fullVisionTurn": -1, "turn": 0, "current": cities[0].id, "visited": [cities[0].id], "ended": false,
 		"ending": null, "events": [], "history": [{"turn": 0, "kind": "开端",
 		"text": "你成为造物主的使者，抵达余烬城。每座城市都在漂移，唯有誓约可能留下不变之物。"}], "cities": cities}
 
@@ -152,6 +152,11 @@ static func log_entry(s: Dictionary, kind: String, text: String, id: String = ""
 
 static func enforce_oaths(s: Dictionary, before: Array) -> void:
 	for c in s.cities:
+		# A permanent beacon takes priority over an older/dormant location oath.
+		if c.get("beacon") != null:
+			c.x = c.beacon.anchor.x
+			c.y = c.beacon.anchor.y
+			c.territory.angle = c.beacon.anchor.angle
 		var old: Dictionary = {}
 		for b in before:
 			if b.id == c.id:
@@ -160,8 +165,9 @@ static func enforce_oaths(s: Dictionary, before: Array) -> void:
 		if old.is_empty() or not oath_active(old):
 			continue
 		if c.oath.type == "anchor":
-			c.x = old.oath.anchor.x
-			c.y = old.oath.anchor.y
+			if c.get("beacon") == null:
+				c.x = old.oath.anchor.x
+				c.y = old.oath.anchor.y
 		else:
 			var key = old.oath.type
 			if METRICS.has(key):
@@ -221,9 +227,10 @@ func advance(state: Dictionary, action: String, target_id: String = "") -> Dicti
 	var action_entry = {"turn": s.turn, "kind": "行动", "city": current.id, "cost": result.cost, "text": "你在%s%s。" % [current.name, result.text]}
 	s.history.append(action_entry)
 	for c in s.cities:
-		c.territory.angle = fmod(c.territory.angle + c.territory.spin + 360, 360)
+		if c.get("beacon") == null:
+			c.territory.angle = fmod(c.territory.angle + c.territory.spin + 360, 360)
 		var old = city({"cities": before}, c.id)
-		if not oath_active(old) or c.oath.type != "anchor":
+		if c.get("beacon") == null and (not oath_active(old) or c.oath.type != "anchor"):
 			c.x += (c.vx + sin(s.turn / 5.0 + c.origin.x) * 1.1) * DRIFT_SPEED
 			c.y += (c.vy + cos(s.turn / 6.0 + c.origin.y) * 1.1) * DRIFT_SPEED
 			var radius = TerritoryRules.radius(c)
@@ -300,6 +307,36 @@ func advance(state: Dictionary, action: String, target_id: String = "") -> Dicti
 
 func action_spec(c: Dictionary, action: String) -> Dictionary:
 	return CityEconomy.spec(config, action, str(c.oath.type) if oath_active(c) else "")
+
+func beacon_block(state: Dictionary) -> String:
+	if state.ended:
+		return "世界已结算，无法点亮灯塔。"
+	var c = city(state, state.current)
+	if c.get("beacon") != null:
+		return "本城灯塔已永久点亮"
+	var missing: Array[String] = []
+	for key in config.beacon_cost:
+		var amount = config.beacon_cost[key]
+		if not METRICS.has(key) or not (amount is int or amount is float) or not is_finite(float(amount)) or amount != floor(amount) or amount < 0 or amount > 100:
+			return "灯塔费用配置无效"
+		if c[key] < amount:
+			missing.append("%s需%d（现有%d）" % [METRICS[key], amount, c[key]])
+	return "资源不足：" + "，".join(missing) if not missing.is_empty() else ""
+
+func light_beacon(state: Dictionary) -> Dictionary:
+	var blocked = beacon_block(state)
+	if not blocked.is_empty():
+		return {"error": blocked}
+	var s = state.duplicate(true)
+	var c = city(s, s.current)
+	var cost = config.beacon_cost.duplicate()
+	for key in cost:
+		c[key] -= cost[key]
+	c.beacon = {"litAt": s.turn, "anchor": {"x": c.x, "y": c.y, "angle": c.territory.angle}, "cost": cost}
+	s.fullVisionTurn = s.turn
+	log_entry(s, "灯塔", "%s永久点亮灯塔（支付%s）。中心与旋转永久固定，本轮获得全图视野；下一次成功行动后恢复迷雾，不推进轮次。" % [c.name, CityEconomy.describe(cost, "−") if not cost.is_empty() else "无"], c.id)
+	s.history.append({"turn": s.turn, "kind": "灯塔快照", "cities": s.cities.duplicate(true), "fullVisionTurn": s.fullVisionTurn, "text": "灯塔点亮后的世界状态，不推进轮次。"})
+	return s
 
 static func local_ending(s: Dictionary) -> Dictionary:
 	var values: Dictionary = {}

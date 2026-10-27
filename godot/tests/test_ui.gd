@@ -77,6 +77,8 @@ func economic_fixture() -> void:
 func run() -> void:
 	root.size = Vector2i(1440, 960)
 	game = load("res://scenes/main.tscn").instantiate()
+	game.config = game.config.duplicate(true)
+	game.config.fog_enabled = false
 	game.initial_seed = 123
 	root.add_child(game)
 	game.get_node("%EchoDialog").visibility_changed.connect(func():

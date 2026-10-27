@@ -30,6 +30,7 @@ citizenEvents.forEach(e => resource('Event', e.id, {
   effect: quote(e.effect), repeat: String(Boolean(e.repeat)), predicate: quote(e.id),
 }));
 lines.push('', '[resource]', 'script = ExtResource("World")');
+lines.push('fog_enabled = true', 'beacon_cost = {"trade": 20, "food": 5, "ecology": 3}');
 for (const [kind, key] of [['City','cities'], ['Action','actions'], ['Event','events']]) {
   lines.push(`${key} = Array[ExtResource("${kind}")]([${refs[kind].join(', ')}])`);
 }

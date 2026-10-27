@@ -22,6 +22,7 @@ await run(process.execPath, ['tools/test-godot-proxy.mjs']);
 await run(executable, ['--headless','--path','godot','--editor','--import','--quit']);
 await run(executable, ['--headless','--path','godot','--script','res://tests/test_world.gd']);
 await run(executable, ['--headless','--path','godot','--script','res://tests/test_ui.gd']);
+await run(executable, ['--headless','--path','godot','--script','res://tests/test_fog_beacon.gd']);
 const server = http.createServer(async (req,res) => {
   let raw = ''; for await (const chunk of req) raw += chunk;
   const input = JSON.parse(raw);

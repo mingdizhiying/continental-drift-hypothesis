@@ -25,6 +25,8 @@ func run() -> void:
 		quit(1)
 		return
 	game = load("res://scenes/main.tscn").instantiate()
+	game.config = game.config.duplicate(true)
+	game.config.fog_enabled = false
 	game.initial_seed = 123
 	root.add_child(game)
 	await process_frame

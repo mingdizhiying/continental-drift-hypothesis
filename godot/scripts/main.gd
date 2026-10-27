@@ -12,7 +12,7 @@ var ending_revealed = false
 var last_turn_status = "本轮使用本地规则模拟。"
 
 func _ready() -> void:
-	get_window().title = "大陆漂移假说 · Godot v0.3.2"
+	get_window().title = "大陆漂移假说 · Godot 迷雾与灯塔"
 	rules = WorldRules.new(config)
 	%Tabs.set_tab_title(0, "治理")
 	%Tabs.set_tab_title(1, "誓约")
@@ -39,6 +39,7 @@ func _ready() -> void:
 		%CityTabs.add_child(button)
 		city_buttons[c.id] = button
 	%WorldMap.city_selected.connect(select_city)
+	%BeaconButton.pressed.connect(light_beacon)
 	%MediateButton.pressed.connect(func():
 		var index = %DiplomacyTarget.selected
 		if index >= 0 and not %DiplomacyTarget.disabled:
@@ -101,21 +102,38 @@ func reset_world() -> void:
 func select_city(id: String) -> void:
 	if busy or %EchoDialog.visible:
 		return
+	if WorldVision.level(WorldVision.visibility(state, config.fog_enabled), id) != "full":
+		return
 	selected = id
 	clear_pending()
 	render(false)
 
 func render(animate: bool = false) -> void:
+	var vision = WorldVision.visibility(state, config.fog_enabled)
+	if WorldVision.level(vision, selected) != "full":
+		selected = state.current
 	var current = WorldRules.city(state, state.current)
 	var c = WorldRules.city(state, selected)
+	var details = WorldVision.details_allowed(state, selected, config.fog_enabled)
 	var can_act: bool = not busy and not state.ended and selected == state.current
 	%Clock.text = "世界时间  %02d / 60" % state.turn
 	%Current.text = "当前治理  " + current.name
 	%Tenure.text = "任期  已结束" if state.ended else "剩余任期  %d 轮" % (6 - int(state.turn) % 6)
 	%Next.text = "世界已结算" if state.ended else "最近下一站  " + WorldRules.nearest(state).name
+	if config.fog_enabled and not vision.global and not state.ended:
+		%Next.text = "下一站  迁城时揭晓"
 	%CityName.text = c.name
 	%CityRole.text = "当前治理" if c.id == state.current else "远方城市 · 仅查看"
 	%CityDescription.text = "%s · 曾治理%d次\n位置 (%d, %d) · 距当前城 %d" % [c.lore, c.visits, round(c.x), round(c.y), round(WorldRules.distance(current, c))]
+	%Food.get_parent().visible = details
+	%Tabs.visible = details
+	%VisibilityNotice.visible = not details
+	if not details:
+		%CityRole.text = "可见领土 · 城内情况未知"
+		%CityDescription.text = "接壤领土 · %s 型\n中心 (%d, %d)" % [c.territory.shape, round(c.x), round(c.y)]
+	%FogStatus.text = "迷雾：仅本城与接壤领土；贸易城市只可见中心点。"
+	if vision.global:
+		%FogStatus.text = "灯塔照耀：本轮全图可见，下一次成功行动后恢复迷雾。" if config.fog_enabled else "全图观察模式（迷雾已在工程配置中关闭）"
 	render_diplomacy(c, can_act)
 	var metric_nodes = {"food": %Food, "peace": %Peace, "trade": %Trade, "ecology": %Ecology}
 	for key in metric_nodes:
@@ -131,6 +149,13 @@ func render(animate: bool = false) -> void:
 	%BarrierStatus.text = "圣光屏障 %d / 6 · %s" % [c.barrier, outcome.title if c.barrier >= 6 else "尚未展开"]
 	if not c.barrierResults.is_empty():
 		%BarrierStatus.text += "\n第%d轮任期结果：%s" % [c.barrierResults[-1].turn, c.barrierResults[-1].title]
+	var beacon_blocked = rules.beacon_block(state) if selected == state.current else "仅当前治理城市可点亮"
+	%BeaconButton.disabled = not can_act or not beacon_blocked.is_empty()
+	%BeaconButton.text = "灯塔已永久点亮" if c.get("beacon") != null else "永久点亮灯塔 · 不耗回合"
+	%BeaconStatus.text = "灯塔 · 中心与旋转已永久固定" if c.get("beacon") != null else "灯塔 · 点亮后永久固定城市"
+	%BeaconCost.text = "支付：%s。点亮时获得一轮全图视野。" % (CityEconomy.describe(config.beacon_cost, "−") if not config.beacon_cost.is_empty() else "无")
+	if not beacon_blocked.is_empty():
+		%BeaconCost.text += "\n" + beacon_blocked
 	%JudgeButton.disabled = not can_act
 	%ConfirmButton.disabled = not can_act
 	%ConfirmButton.visible = not pending.is_empty()
@@ -139,15 +164,18 @@ func render(animate: bool = false) -> void:
 	%ResetButton.disabled = busy
 	%ExportButton.disabled = busy
 	for id in city_buttons:
+		var level = WorldVision.level(vision, id)
+		city_buttons[id].visible = level != "hidden"
 		city_buttons[id].set_pressed_no_signal(id == selected)
-		city_buttons[id].disabled = busy
+		city_buttons[id].disabled = busy or level != "full"
+		city_buttons[id].tooltip_text = "只可见贸易城市中心" if level == "center" else "查看可见领土"
 	if c.oath != null:
 		%OathState.text = "「%s」\n%s · %s" % [c.oath.text, "生效" if WorldRules.oath_active(c) else "休眠", c.oath.explanation]
 	else:
 		%OathState.text = "此城尚未立誓。每城一条，离任后保留。"
 	%OpenEchoButton.disabled = busy or state.turn == 0
 	%OpenEchoButton.text = "查看第%d轮回响" % state.turn if state.turn > 0 else "查看本轮回响"
-	var history = state.history.filter(func(h): return not h.has("cities")).slice(-30)
+	var history = WorldVision.history_for_player(state, config.fog_enabled).slice(-30)
 	history.reverse()
 	var log_lines: Array[String] = []
 	for h in history:
@@ -164,6 +192,18 @@ func render(animate: bool = false) -> void:
 			summaries.append("%s：%s（%d/6）" % [entry.city, entry.title, entry.barrier])
 		%EndingCities.text = "  ·  ".join(summaries)
 	%WorldMap.update_world(state, selected, config, animate)
+
+func light_beacon() -> void:
+	if busy or state.ended or selected != state.current or %EchoDialog.visible:
+		return
+	var next = rules.light_beacon(state)
+	if next.has("error"):
+		%Footer.text = next.error
+		return
+	state = next
+	clear_pending()
+	%Footer.text = "灯塔已永久点亮，中心与旋转固定。本轮全图可见，下一次成功行动后恢复迷雾。"
+	render()
 
 func judge_oath() -> void:
 	if busy or state.ended or selected != state.current or %EchoDialog.visible:
@@ -268,7 +308,7 @@ func perform(action: String, target_id: String = "") -> void:
 func open_echo() -> void:
 	if busy or state.turn == 0 or %EchoDialog.visible:
 		return
-	%EchoDialog.present(state, get_viewport_rect().size, last_turn_status)
+	%EchoDialog.present(state, get_viewport_rect().size, last_turn_status, config.fog_enabled)
 
 func _on_echo_closed() -> void:
 	call_deferred("_after_echo_closed")
@@ -283,11 +323,21 @@ func _after_echo_closed() -> void:
 
 func render_diplomacy(c: Dictionary, can_act: bool) -> void:
 	%TerritoryStatus.text = "%s 型 · 朝向 %.1f° · %s %.2f°/轮\n世界种子 %d" % [c.territory.shape, c.territory.angle, "顺时针" if c.territory.spin > 0 else "逆时针", abs(c.territory.spin), state.seed]
+	var vision = WorldVision.visibility(state, config.fog_enabled)
+	if config.fog_enabled and not vision.global:
+		%TerritoryStatus.text = "%s 型 · 朝向 %.1f° · %s %.2f°/轮" % [c.territory.shape, c.territory.angle, "顺时针" if c.territory.spin > 0 else "逆时针", abs(c.territory.spin)]
+	if c.get("beacon") != null:
+		%TerritoryStatus.text = "%s 型 · 朝向 %.1f°\n灯塔永久点亮：中心与旋转固定" % [c.territory.shape, c.territory.angle]
 	var lines: Array[String] = []
 	for pair in WorldRules.connections(state):
 		if pair.a != c.id and pair.b != c.id:
 			continue
+		if not WorldVision.pair_visible(state, vision, pair):
+			continue
 		var other = WorldRules.city(state, pair.b if pair.a == c.id else pair.a)
+		if WorldVision.level(vision, other.id) == "center":
+			lines.append("%s：贸易 · 只可见城市中心" % other.name)
+			continue
 		var line = "%s：%s · 间距 %.2f 格" % [other.name, pair.type, pair.gap / TerritoryRules.CELL]
 		if pair.overlapArea > 0:
 			var percentage: float = pair.overlapRatio * 100
@@ -296,6 +346,8 @@ func render_diplomacy(c: Dictionary, can_act: bool) -> void:
 			line += " · 休战至第%d轮" % pair.truceUntil
 		lines.append(line)
 	%Relations.text = "\n".join(lines)
+	if lines.is_empty():
+		%Relations.text = "迷雾中没有可观察的邻接领土或贸易城市。"
 	var old_target = ""
 	if %DiplomacyTarget.selected >= 0:
 		old_target = str(%DiplomacyTarget.get_item_metadata(%DiplomacyTarget.selected))
@@ -357,6 +409,7 @@ func show_rules() -> void:
 	for e in config.events:
 		text += "%s：%s；%s。\n" % [escape_bb(e.title), escape_bb(e.condition), "可重复" if e.repeat else "每城最多一次"]
 	text += "\n[color=#e2bd79]领地关系、外交与 AI[/color]\n每格64单位，按旋转多边形的实际重叠面积和边界间距判断关系。重叠争夺双方粮食、安定和繁荣；未重叠且间距不超过一格时贸易，远离所有领地时隔绝。贸易每城每轮合计封顶4粮食、8繁荣。\n外交调停需8繁荣并推进一轮，选择当前重叠且未休战的其他城市；从本轮起休战三轮，双方不争夺、不贸易，与第三城互动照常。\n默认完整离线运行。真实 AI 需启动 tools/godot-proxy.mjs，密钥只保存在代理端；请求失败会明确回退。\n\n[color=#e2bd79]进度与导出[/color]\n导出 JSON 包含种子、领地形状/角度/角速度、外交协议、支付成本、任期结果、全部行动和逐轮快照。关闭或重开世界会清空进度，暂不支持读档。"
+	text += "\n\n[color=#e2bd79]迷雾与灯塔[/color]\n默认只能看见当前治理城市的领土、与它实际接触或重叠的领土，以及通商城市的中心点；贸易中心不显示领土，接壤城市不显示城内指标。选择其他可见领土不会扩大视野，迷雾不会阻止世界继续演化或最近城市迁移。\n点亮灯塔支付%s，不推进轮次，也不触发市民事件。灯塔在本局永久点亮，中心与旋转都固定，离任后仍保留，不能重复付费点亮。旧位置誓约不会覆盖灯塔的固定坐标。\n点亮时立即获得当前轮的全图视野；查看、立誓、失败操作均不消耗，下一次成功行动结算后恢复迷雾。灯塔不持续提供远方视野。完整JSON导出仍包含隐藏世界数据，供复盘调试。" % (CityEconomy.describe(config.beacon_cost, "−") if not config.beacon_cost.is_empty() else "无")
 	%RulesDialog.get_node("Content").text = text
 	var bounds = get_viewport_rect().size
 	%RulesDialog.popup_centered(Vector2i(minf(780, bounds.x - 48), minf(680, bounds.y - 48)))
