@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[node name="Metric" type="VBoxContainer"]
+custom_minimum_size = Vector2(160, 42)
+theme_override_constants/separation = 5
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "粮食 50 / 100"
+
+[node name="Bar" type="ProgressBar" parent="."]
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+mouse_filter = 2
+value = 50.0
+show_percentage = false
