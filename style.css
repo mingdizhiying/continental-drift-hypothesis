@@ -6,3 +6,21 @@
 main > .citizens:first-child{margin-top:0;margin-bottom:38px}.drifting-world{margin-top:38px;padding-top:18px;border-top:1px solid var(--line)}
 
 #diplomacy{margin:24px 0;padding-top:12px;border-top:1px solid #536763}#diplomacy p{line-height:1.6}#diplomacy select{display:block;width:100%;padding:12px;margin:8px 0 12px;background:#203436;color:#ede8dc;border:1px solid #668185;border-radius:6px}#diplomacy button{width:100%}
+
+/* Native dialog keeps keyboard focus inside and supports Escape without advancing time. */
+body.echo-open{overflow:hidden}
+#echo-dialog{width:min(720px,calc(100vw - 32px));max-height:85vh;max-height:85dvh;padding:0;border:1px solid var(--gold);border-radius:14px;background:var(--panel);color:var(--ink);box-shadow:0 24px 90px #0009}
+#echo-dialog[open]{display:flex;flex-direction:column}
+#echo-dialog::backdrop{background:#071013c9;backdrop-filter:blur(5px)}
+.echo-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 24px 8px;flex-shrink:0}
+.echo-header .eyebrow{margin:0 0 6px}.echo-header h2{margin:0;font-size:24px}
+#echo-description{margin:0;padding:0 24px 14px;flex-shrink:0}
+.echo-body{overflow-y:auto;overscroll-behavior:contain;padding:0 24px 20px;min-height:0}
+.echo-body section+section{border-top:1px solid var(--line);margin-top:20px;padding-top:8px}
+.echo-body h3{color:var(--gold);font-size:16px}.echo-body h4{font-size:19px;margin:14px 0 8px}.echo-body p{font-size:14px;overflow-wrap:anywhere}
+.echo-footer{border-top:1px solid var(--line);padding:14px 24px;display:flex;justify-content:flex-end;flex-shrink:0;background:var(--panel)}
+#continue-echo{background:#e2bd7920;border-color:var(--gold)}
+#close-echo{white-space:nowrap}.chronicle>summary{font-size:18px}.chronicle #export{margin-top:16px}
+@media(max-width:600px){.echo-header{padding:16px 16px 8px}.echo-header h2{font-size:20px}#echo-description{padding:0 16px 12px}.echo-body{padding:0 16px 16px}.echo-footer{padding:12px 16px}#open-echo{font-size:12px;padding:9px}.chronicle>summary .hint{display:block;margin-top:6px}}
+
+main>#ending{margin-top:0;margin-bottom:32px;scroll-margin-top:20px}main>#ending:focus-visible{outline:2px solid var(--gold);outline-offset:4px}

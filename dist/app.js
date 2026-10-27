@@ -10,16 +10,20 @@ function render(){const current=state.cities.find(c=>c.id===state.current),city=
  lines('scene',[['h3',`${city.name}${city.id===state.current?'·当前治理':'·远方城市'}`],['p',`${city.lore}。位置(${Math.round(city.x)},${Math.round(city.y)})；距当前城${Math.round(distance(current,city))}。曾治理${city.visits}次。`],['p',Object.entries(metricNames).map(([k,n])=>`${n} ${city[k]}/100`).join(' · ')],['p',city.oath?`誓约：「${city.oath.text}」／${oathTypes[city.oath.type]}。${city.oath.explanation}。当前${oathActive(city)?'生效':'条件不足，暂时休眠'}。`:'此城尚未点燃誓约火炬。']]);
  renderBarrier(city);renderDiplomacy(city);
  for(const id of ['judge','oath-text','ai','reset'])$(id).disabled=busy||(id!=='reset'&&(state.ended||selected!==state.current));$('ai').disabled=simulationOnly||$('ai').disabled;$('confirm').disabled=busy||state.ended||selected!==state.current;$('confirm').hidden=!pending;
- lines('events',[...state.events.flatMap(e=>[['h3',`${e.city}·${e.name}`],['p',e.text],['p',`条件：${e.condition}；影响：${Object.entries(e.effect).map(([k,v])=>`${metricNames[k]} ${v>0?'+':''}${v}`).join('，')||'无数值变化'}`]]),['p',state.interactions?.join('\n')||'等待第一次行动，城市将在六十轮中逐渐改变关系。']]);$('event-guide').replaceChildren(...citizenEvents.map(e=>text('p',`${e.name}：${e.condition}。${e.repeat?'可重复':'每城最多一次'}。`)));$('log').replaceChildren(...state.history.filter(h=>!h.cities).slice(-30).reverse().map(h=>text('li',`第${h.turn}轮·${h.kind}：${h.text}`)));
+ renderEcho();$('event-guide').replaceChildren(...citizenEvents.map(e=>text('p',`${e.name}：${e.condition}。${e.repeat?'可重复':'每城最多一次'}。`)));$('log').replaceChildren(...state.history.filter(h=>!h.cities).slice(-30).reverse().map(h=>text('li',`第${h.turn}轮·${h.kind}：${h.text}`)));
  $('ending').hidden=!state.ended;if(state.ending)lines('ending',[['p',`世界结算·${state.ending.source}`],['h2',state.ending.title],['p',state.ending.text],['h3','历史依据'],...(state.ending.barriers||[]).map(c=>['p',`${c.city}：${c.title} · 屏障${c.barrier}/6，安定${c.peace}/100，粮食${c.food}${c.governed?'':'（尚未治理）'}`]),...state.ending.evidence.map(e=>['p',e])]);}
 async function api(task,input){if(simulationOnly)throw new Error('在线试玩仅使用本地模拟');const r=await fetch('/api/world',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task,...input}),signal:AbortSignal.timeout(35000)});const d=await r.json();if(!r.ok)throw new Error(d.error||'接口请求失败');return d;}
 function clearPending(){pending=null;$('oath-preview').replaceChildren();$('confirm').hidden=true;}
 $('oath-text').oninput=clearPending;$('ai').onchange=()=>{clearPending();$('ai-status').textContent=$('ai').checked?'真实AI模式：请求失败时明确回退到本地模拟。':'本地模拟模式。';};
 $('judge').onclick=async()=>{if(busy)return;busy=true;render();clearPending();try{const raw=$('oath-text').value.trim();if(!raw||raw.length>160)throw new Error('请填写1–160字的誓约。');if(useAi()){try{const d=await api('oath',{state,text:raw});if(!d.accepted){const error=new Error(d.reason||'誓约不可执行');error.rejected=true;throw error;}pending={...d.oath,text:raw,source:'真实AI'};setOath(state,pending);$('ai-status').textContent='誓约条件由真实AI判定。';}catch(e){if(e.rejected)throw e;$('ai-status').textContent=`AI未生效：${e.message}。改用本地模拟。`;pending=parseOath(raw);}}else pending=parseOath(raw);const city=state.cities.find(c=>c.id===state.current);lines('oath-preview',[['h3',oathTypes[pending.type]],['p',pending.explanation],['p',`${pending.source}·当前${city[pending.condition.metric]>=pending.condition.min?'满足':'不满足'}实行条件。确认后替换本城旧誓约，不推进时间。`]]);}catch(e){pending=null;lines('oath-preview',[['p',e.message]]);}finally{busy=false;render();}};
 $('confirm').onclick=()=>{try{if(!pending||busy)return;state=setOath(state,pending);clearPending();$('oath-text').value='';render();}catch(e){lines('oath-preview',[['p',e.message]]);}};
-async function perform(action,targetId){if(busy||state.ended||selected!==state.current)return;busy=true;clearPending();render();const before=state;try{let next=advance(state,action,targetId);if(useAi()){try{const result=await api('turn',{before,state:next,action});next=applyAiTurn(next,result,before);$('ai-status').textContent='本轮真实AI已判定城市影响；指标变化限定在±3。';}catch(e){if(e.rejected)throw e;$('ai-status').textContent=`AI未生效：${e.message}；本轮使用本地规则。`;}if(next.ended){try{const ending=await api('ending',{state:next});next.ending={...next.ending,...ending,source:'真实AI'};}catch(e){$('ai-status').textContent=`最终AI结算未生效：${e.message}；显示本地历史结算。`;}}}state=next;selected=state.current;}catch(e){$('ai-status').textContent=e.message;}finally{busy=false;render();}}
+async function perform(action,targetId){if(busy||state.ended||selected!==state.current||$('echo-dialog').open)return;busy=true;clearPending();render();const before=state;try{let next=advance(state,action,targetId);if(useAi()){try{const result=await api('turn',{before,state:next,action});next=applyAiTurn(next,result,before);$('ai-status').textContent='本轮真实AI已判定城市影响；指标变化限定在±3。';}catch(e){if(e.rejected)throw e;$('ai-status').textContent=`AI未生效：${e.message}；本轮使用本地规则。`;}if(next.ended){try{const ending=await api('ending',{state:next});next.ending={...next.ending,...ending,source:'真实AI'};}catch(e){$('ai-status').textContent=`最终AI结算未生效：${e.message}；显示本地历史结算。`;}}}state=next;selected=state.current;}catch(e){$('ai-status').textContent=e.message;}finally{busy=false;render();if(state.turn>before.turn)openEcho();}}
 document.addEventListener('click',e=>{if(e.target.closest('#mediate'))perform('mediate',$('diplomacy-target').value);const city=e.target.closest('[data-city]');if(city&&!busy){selected=city.dataset.city;clearPending();render();}const law=e.target.closest('[data-law]');if(law&&!busy&&!state.ended&&selected===state.current){$('oath-text').value=legacyLaws[law.dataset.law].text;clearPending();$('judge').click();}const button=e.target.closest('[data-action]');if(button)perform(button.dataset.action);});document.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)&&e.target.matches('[data-city]')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
-$('reset').onclick=()=>{if(busy)return;state=initial();selected=state.current;clearPending();$('oath-text').value='';$('ai-status').textContent='新世界已生成，当前使用'+(useAi()?'真实AI接口（失败时明确回退）':'本地模拟')+'。';render();};$('export').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`大陆漂移假说-第${state.turn}轮.json`;a.click();URL.revokeObjectURL(url);};render();
+$('open-echo').onclick=openEcho;
+$('close-echo').onclick=()=>$('echo-dialog').close();
+$('continue-echo').onclick=()=>$('echo-dialog').close();
+$('echo-dialog').addEventListener('close',()=>{document.body.classList.remove('echo-open');if(state.ended){$('ending').focus({preventScroll:true});$('ending').scrollIntoView({block:'start'});}else if(!$('open-echo').disabled)$('open-echo').focus({preventScroll:true});});
+$('reset').onclick=()=>{if(busy)return;$('echo-dialog').close();$('history-panel').open=false;state=initial();selected=state.current;clearPending();$('oath-text').value='';$('ai-status').textContent='新世界已生成，当前使用'+(useAi()?'真实AI接口（失败时明确回退）':'本地模拟')+'。';render();};$('export').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`大陆漂移假说-第${state.turn}轮.json`;a.click();URL.revokeObjectURL(url);};render();
 
 function renderBarrier(city){
  const locked=busy||state.ended||selected!==state.current,law=oathActive(city)?city.oath.type:null;
@@ -47,4 +51,25 @@ function renderDiplomacy(city){
  const b=text('button',`外交调停 · 支付${DIPLOMACY_COST}繁荣`);b.id='mediate';b.disabled=locked||!targets.length||city.trade<DIPLOMACY_COST;
  const hint=text('p',city.trade<DIPLOMACY_COST?'繁荣不足，无法调停。':'推进一轮；从本次结算起连续三轮双方休战，不互相争夺资源，也不获得彼此的贸易收益。位置誓约固定城市中心，领地仍缓慢旋转。');hint.className='hint';
  $('diplomacy').replaceChildren(text('h3','领地关系与外交'),status,...relations,label,select,b,hint);
+}
+
+function renderEcho(){
+ $('open-echo').disabled=busy||state.turn===0;
+ $('open-echo').textContent=state.turn?`查看第${state.turn}轮回响`:'查看本轮回响';
+ $('echo-title').textContent=`第${state.turn}轮 · 世界回响`;
+ $('continue-echo').textContent=state.ended?'查看世界结局':'继续治理';
+ const records=state.history.filter(h=>h.turn===state.turn);
+ lines('events',[['h3','市民事件'],...state.events.flatMap(e=>[['h4',`${e.city} · ${e.name}`],['p',e.text],['p',`触发条件：${e.condition}`],['p',`影响：${Object.entries(e.effect).map(([k,v])=>`${metricNames[k]} ${v>0?'+':''}${v}`).join('，')||'无数值变化'}`]])]);
+ const changes=records.filter(h=>h.kind==='距离变化');
+ lines('relation-changes',[['h3','城市关系切换'],...(changes.length?changes.map(h=>['p',h.text+' 原因：'+(h.text.includes('→休战')?'外交调停协议开始生效。':h.text.includes('→冲突')?'当前领地发生重叠，且没有有效休战协议。':h.text.includes('→贸易')?'当前领地没有重叠，边界距离不超过一格，且没有有效休战协议。':'领地边界距离超过一格，商路断开。')]):[['p','本轮没有城市关系切换。']])]);
+ const milestones=records.filter(h=>['屏障结果','迁城','AI屏障复核','AI判定'].includes(h.kind));
+ $('turn-milestones').hidden=!milestones.length&&!state.ended;
+ lines('turn-milestones',[['h3',state.ended?'世界已结算':'任期与世界动态'],...milestones.map(h=>['p',h.text]),...(state.ended?[['p','第六十轮已结束，关闭弹窗后查看完整结局与历史依据。']]:[])]);
+ lines('interaction-summary',state.interactions?.length?state.interactions.map(t=>['p',t]):[['p','本轮没有贸易、争夺或休战互动。']]);
+}
+function openEcho(){
+ if(busy||state.turn===0||$('echo-dialog').open)return;
+ $('interaction-details').open=false;
+ $('echo-dialog').showModal();document.body.classList.add('echo-open');
+ $('echo-dialog').scrollTop=0;$('echo-dialog').querySelector('.echo-body').scrollTop=0;
 }
