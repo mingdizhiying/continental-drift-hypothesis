@@ -13,6 +13,6 @@
     "start": "node server.js",
     "test": "node --test world.test.js",
     "test:godot": "node tools/test-godot.mjs",
-    "check": "node --check app.js && node --check world.js && node --check server.js && node --check world.test.js && node --check tools/export-godot-data.mjs && node --check tools/godot-reference.mjs && node --check tools/test-godot.mjs && node --check tools/godot-proxy.mjs"
+    "check": "node --check app.js && node --check world.js && node --check server.js && node --check world.test.js && node --check tools/export-godot-data.mjs && node --check tools/godot-reference.mjs && node --check tools/test-godot.mjs && node --check tools/godot-proxy.mjs && node --check tools/test-godot-proxy.mjs"
   }
 }

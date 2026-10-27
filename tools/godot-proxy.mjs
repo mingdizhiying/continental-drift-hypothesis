@@ -13,4 +13,4 @@ const server=http.createServer(async(req,res)=>{let path;try{path=decodeURI(new 
  if(input.task==='ending'&&(typeof data.title!=='string'||data.title.length>100||typeof data.text!=='string'||data.text.length>6000||!Array.isArray(data.evidence)||data.evidence.length>20||data.evidence.some(e=>typeof e!=='string'||e.length>1000)))throw new Error('结局格式无效');return json(res,200,data);
  }catch{return json(res,502,{error:'AI请求失败、超时或响应格式无效'});}}
  return json(res,404,{error:"Godot proxy only supports POST /api/world"});});
-server.listen(Number(process.env.PORT||4173),'127.0.0.1',()=>console.log('大陆漂移假说：http://127.0.0.1:'+Number(process.env.PORT||4173)));
+server.listen(Number(process.env.PORT||4173),'127.0.0.1',()=>console.log('Godot AI proxy：http://127.0.0.1:'+server.address().port));

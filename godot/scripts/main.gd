@@ -8,13 +8,18 @@ var selected: String
 var pending: Dictionary = {}
 var busy = false
 var city_buttons: Dictionary = {}
+var ending_revealed = false
+var last_turn_status = "本轮使用本地规则模拟。"
 
 func _ready() -> void:
+	get_window().title = "大陆漂移假说 · Godot v0.3.2"
 	rules = WorldRules.new(config)
+	%Tabs.set_tab_title(0, "治理")
+	%Tabs.set_tab_title(1, "誓约")
+	%Tabs.set_tab_title(2, "领地外交")
 	for i in config.actions.size():
 		var action = config.actions[i]
 		var button: Button = %Actions.get_child(i)
-		button.text = action.title
 		button.set_meta("action_id", action.id)
 		button.pressed.connect(perform.bind(action.id))
 	for i in CityEconomy.LEGACY_LAWS.size():
@@ -52,6 +57,18 @@ func _ready() -> void:
 	%ExportDialog.file_selected.connect(export_history)
 	%RulesButton.pressed.connect(show_rules)
 	%EndingButton.pressed.connect(show_ending)
+	%FullEndingButton.pressed.connect(show_ending)
+	%OpenEchoButton.pressed.connect(open_echo)
+	%EchoDialog.confirmed.connect(_on_echo_closed)
+	%EchoDialog.canceled.connect(_on_echo_closed)
+	%EchoDialog.visibility_changed.connect(func():
+		$Margin.modulate = Color(0.48, 0.48, 0.48) if %EchoDialog.visible else Color.WHITE)
+	%HistoryToggle.toggled.connect(func(expanded):
+		%History.visible = expanded
+		%HistoryToggle.text = "世界历史  ▾" if expanded else "世界历史  ▸")
+	%EchoDialog.theme = theme
+	%EndingDialog.theme = theme
+	%RulesDialog.theme = theme
 	reset_world()
 
 static func escape_bb(text: String) -> String:
@@ -66,6 +83,14 @@ func reset_world() -> void:
 	if busy:
 		return
 	state = rules.initial(initial_seed)
+	ending_revealed = false
+	last_turn_status = "本轮使用本地规则模拟。"
+	%EchoDialog.hide()
+	%HistoryToggle.set_pressed_no_signal(false)
+	%HistoryToggle.text = "世界历史  ▸"
+	%History.hide()
+	%Tabs.current_tab = 0
+	%Footer.text = "每行动推进一轮 · 每六轮迁往最近的其他城市 · 立誓不推进时间 · 第六十轮结算"
 	selected = state.current
 	clear_pending()
 	%OathInput.text = ""
@@ -74,7 +99,7 @@ func reset_world() -> void:
 	render(false)
 
 func select_city(id: String) -> void:
-	if busy:
+	if busy or %EchoDialog.visible:
 		return
 	selected = id
 	clear_pending()
@@ -99,9 +124,7 @@ func render(animate: bool = false) -> void:
 	for button in %Actions.get_children():
 		var spec = rules.action_spec(c, button.get_meta("action_id"))
 		var blocked = CityEconomy.block(c, spec)
-		button.disabled = not can_act or not blocked.is_empty()
-		button.text = spec.name + ("\n资源不足" if blocked.begins_with("资源不足") else ("\n" + blocked if not blocked.is_empty() else ""))
-		button.tooltip_text = "%s\n支付：%s\n获得：%s\n%s" % [spec.place, CityEconomy.describe(spec.cost, "−") if not spec.cost.is_empty() else "无", CityEconomy.describe(spec.gain, "+") if not spec.gain.is_empty() else "无直接收益，仍推进一轮", blocked]
+		button.configure(spec, blocked, can_act)
 	for button in %LegacyLaws.get_children():
 		button.disabled = not can_act
 	var outcome = CityEconomy.outcome(c)
@@ -122,15 +145,8 @@ func render(animate: bool = false) -> void:
 		%OathState.text = "「%s」\n%s · %s" % [c.oath.text, "生效" if WorldRules.oath_active(c) else "休眠", c.oath.explanation]
 	else:
 		%OathState.text = "此城尚未立誓。每城一条，离任后保留。"
-	var echoes: Array[String] = []
-	for e in state.events:
-		var impacts: Array[String] = []
-		for key in e.effect:
-			impacts.append("%s %s%d" % [WorldRules.METRICS[key], "+" if e.effect[key] > 0 else "", e.effect[key]])
-		echoes.append("[color=#e2bd79]%s · %s[/color]  %s\n条件：%s；影响：%s" % [escape_bb(e.city), escape_bb(e.name), escape_bb(e.text), escape_bb(e.condition), "，".join(impacts) if not impacts.is_empty() else "无数值变化"])
-	for line in state.get("interactions", []).slice(0, 6):
-		echoes.append(escape_bb(line))
-	%Echo.text = "\n".join(echoes) if not echoes.is_empty() else "等待第一次行动，城市将在六十轮中逐渐改变关系。\n选择右侧行动推进世界；点击地图或下方城名查看城市。"
+	%OpenEchoButton.disabled = busy or state.turn == 0
+	%OpenEchoButton.text = "查看第%d轮回响" % state.turn if state.turn > 0 else "查看本轮回响"
 	var history = state.history.filter(func(h): return not h.has("cities")).slice(-30)
 	history.reverse()
 	var log_lines: Array[String] = []
@@ -139,10 +155,18 @@ func render(animate: bool = false) -> void:
 	%History.text = "\n".join(log_lines)
 	%History.scroll_to_line(0)
 	%EndingButton.visible = state.ended
+	%EndingPanel.visible = state.ended and ending_revealed
+	if state.ended:
+		%EndingHeading.text = "世界结算 · %s · %s" % [state.ending.source, state.ending.title]
+		%EndingSummary.text = state.ending.text
+		var summaries: Array[String] = []
+		for entry in state.ending.get("barriers", []):
+			summaries.append("%s：%s（%d/6）" % [entry.city, entry.title, entry.barrier])
+		%EndingCities.text = "  ·  ".join(summaries)
 	%WorldMap.update_world(state, selected, config, animate)
 
 func judge_oath() -> void:
-	if busy or state.ended or selected != state.current:
+	if busy or state.ended or selected != state.current or %EchoDialog.visible:
 		return
 	clear_pending()
 	var raw = %OathInput.text.strip_edges()
@@ -186,7 +210,7 @@ func judge_oath() -> void:
 	render()
 
 func confirm_oath() -> void:
-	if pending.is_empty() or busy or state.ended or selected != state.current:
+	if pending.is_empty() or busy or state.ended or selected != state.current or %EchoDialog.visible:
 		return
 	var next = WorldRules.set_oath(state, pending)
 	if next.has("error"):
@@ -198,7 +222,7 @@ func confirm_oath() -> void:
 	render()
 
 func perform(action: String, target_id: String = "") -> void:
-	if busy or state.ended or selected != state.current:
+	if busy or state.ended or selected != state.current or %EchoDialog.visible:
 		return
 	busy = true
 	clear_pending()
@@ -207,9 +231,11 @@ func perform(action: String, target_id: String = "") -> void:
 	var next = rules.advance(state, action, target_id)
 	if next.has("error"):
 		%AIStatus.text = next.error
+		%Footer.text = next.error
 		busy = false
 		render()
 		return
+	var resolution_notes: Array[String] = []
 	if %AIEnabled.button_pressed:
 		%AIStatus.text = "正在请求本轮 AI 世界影响……"
 		var data: Dictionary = await %AIClient.request("turn", {"before": before, "state": next, "action": action})
@@ -219,6 +245,7 @@ func perform(action: String, target_id: String = "") -> void:
 		else:
 			next = applied
 			%AIStatus.text = "本轮真实 AI 已判定城市影响；每指标限制为 ±3。"
+		resolution_notes.append(%AIStatus.text)
 		if next.ended:
 			%AIStatus.text = "正在请求 AI 结局……"
 			var ending: Dictionary = await %AIClient.request("ending", {"state": next})
@@ -228,12 +255,31 @@ func perform(action: String, target_id: String = "") -> void:
 				%AIStatus.text = "真实 AI 结局已生成；历史证据可导出核对。"
 			else:
 				%AIStatus.text = "最终 AI 结算未生效：%s；显示本地历史结算。" % ending.get("error", "结局格式无效")
+			resolution_notes.append(%AIStatus.text)
+		%AIStatus.text = "\n".join(resolution_notes)
+	last_turn_status = "\n".join(resolution_notes) if not resolution_notes.is_empty() else "本轮使用本地规则模拟。"
+	%Footer.text = last_turn_status.replace("\n", " ")
 	state = next
 	selected = state.current
 	busy = false
 	render(true)
+	open_echo()
+
+func open_echo() -> void:
+	if busy or state.turn == 0 or %EchoDialog.visible:
+		return
+	%EchoDialog.present(state, get_viewport_rect().size, last_turn_status)
+
+func _on_echo_closed() -> void:
+	call_deferred("_after_echo_closed")
+
+func _after_echo_closed() -> void:
 	if state.ended:
-		show_ending()
+		ending_revealed = true
+		render()
+		%EndingHeading.grab_focus()
+	elif state.turn > 0:
+		%OpenEchoButton.grab_focus()
 
 func render_diplomacy(c: Dictionary, can_act: bool) -> void:
 	%TerritoryStatus.text = "%s 型 · 朝向 %.1f° · %s %.2f°/轮\n世界种子 %d" % [c.territory.shape, c.territory.angle, "顺时针" if c.territory.spin > 0 else "逆时针", abs(c.territory.spin), state.seed]
@@ -244,7 +290,8 @@ func render_diplomacy(c: Dictionary, can_act: bool) -> void:
 		var other = WorldRules.city(state, pair.b if pair.a == c.id else pair.a)
 		var line = "%s：%s · 间距 %.2f 格" % [other.name, pair.type, pair.gap / TerritoryRules.CELL]
 		if pair.overlapArea > 0:
-			line += " · 重叠 %.1f%%" % (pair.overlapRatio * 100)
+			var percentage: float = pair.overlapRatio * 100
+			line += " · 重叠 " + ("<0.1%" if percentage < 0.1 else "%.1f%%" % percentage)
 		if pair.has("truceUntil"):
 			line += " · 休战至第%d轮" % pair.truceUntil
 		lines.append(line)
@@ -295,7 +342,8 @@ func show_ending() -> void:
 	for evidence in ending.evidence:
 		text += "\n" + escape_bb(evidence) + "\n"
 	%EndingDialog.get_node("Content").text = text
-	%EndingDialog.popup_centered(Vector2i(800, 620))
+	var bounds = get_viewport_rect().size
+	%EndingDialog.popup_centered(Vector2i(minf(800, bounds.x - 48), minf(680, bounds.y - 48)))
 
 func show_rules() -> void:
 	var text = "[color=#e2bd79][font_size=24]城市终将远行，你留下什么不变？[/font_size][/color]\n\n每次有效行动推进一轮，所有城市漂移与旋转；查看和立誓不消耗轮次。每六轮按城市中心距离迁往最近的其他城市，允许返回旧城，第六十轮结算。每局随机四格板块、朝向和旋转速度，允许重叠穿过，不阻挡或合并。\n\n[color=#e2bd79]城市治理[/color]\n"
@@ -310,4 +358,5 @@ func show_rules() -> void:
 		text += "%s：%s；%s。\n" % [escape_bb(e.title), escape_bb(e.condition), "可重复" if e.repeat else "每城最多一次"]
 	text += "\n[color=#e2bd79]领地关系、外交与 AI[/color]\n每格64单位，按旋转多边形的实际重叠面积和边界间距判断关系。重叠争夺双方粮食、安定和繁荣；未重叠且间距不超过一格时贸易，远离所有领地时隔绝。贸易每城每轮合计封顶4粮食、8繁荣。\n外交调停需8繁荣并推进一轮，选择当前重叠且未休战的其他城市；从本轮起休战三轮，双方不争夺、不贸易，与第三城互动照常。\n默认完整离线运行。真实 AI 需启动 tools/godot-proxy.mjs，密钥只保存在代理端；请求失败会明确回退。\n\n[color=#e2bd79]进度与导出[/color]\n导出 JSON 包含种子、领地形状/角度/角速度、外交协议、支付成本、任期结果、全部行动和逐轮快照。关闭或重开世界会清空进度，暂不支持读档。"
 	%RulesDialog.get_node("Content").text = text
-	%RulesDialog.popup_centered(Vector2i(780, 660))
+	var bounds = get_viewport_rect().size
+	%RulesDialog.popup_centered(Vector2i(minf(780, bounds.x - 48), minf(680, bounds.y - 48)))

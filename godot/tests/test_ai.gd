@@ -14,6 +14,11 @@ func check(value: bool, message: String) -> void:
 	if not value:
 		failures.append(message)
 
+func close_echo() -> void:
+	if game.get_node("%EchoDialog").visible:
+		game.get_node("%EchoDialog").get_ok_button().pressed.emit()
+		await process_frame
+
 func run() -> void:
 	if proxy.is_empty():
 		printerr("Use tools/test-godot.mjs to start the fake proxy.")
@@ -49,11 +54,15 @@ func run() -> void:
 	check(game.state.turn == 1, "AI action did not advance one turn")
 	check(game.state.history.filter(func(h): return h.kind == "AI后快照").size() == 1, "AI turn effects not recorded")
 	check(game.state.cities[0].food >= 50, "Proxy influence bypassed oath")
+	check(game.get_node("%EchoDialog").visible, "AI completion did not show echo")
+	await close_echo()
 	client.endpoint = proxy + "/invalid"
 	await game.perform("observe")
 	check(game.state.turn == 2, "Invalid AI result blocked local turn")
 	check(game.state.history.filter(func(h): return h.kind == "AI后快照").size() == 1, "Invalid AI effect applied")
 	check(game.get_node("%AIStatus").text.contains("本轮使用本地规则"), "Invalid AI fallback not disclosed")
+	check(game.get_node("%EchoDialog").visible, "Fallback completion did not show echo")
+	await close_echo()
 	for route in ["accept", "invalid"]:
 		game.reset_world()
 		for i in 59:
@@ -63,7 +72,8 @@ func run() -> void:
 		await game.perform("observe")
 		check(game.state.turn == 60 and game.state.ended, "Proxy ending blocked completion")
 		check(game.state.ending.source == ("真实AI" if route == "accept" else "本地模拟"), route + ": wrong ending source")
-		game.get_node("%EndingDialog").hide()
+		check(game.state.ending.barriers.size() == 6, "AI replaced local barrier evidence")
+		await close_echo()
 	if failures.is_empty():
 		print("PASS: FAKE proxy HTTP transport, oath acceptance/rejection, invalid JSON/conditions, 503 fallback, bounded turn effects and ending fallback. No live model was tested.")
 		quit(0)

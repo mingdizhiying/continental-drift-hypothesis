@@ -19,5 +19,9 @@ jobs:
         run: npm run check
       - name: Test world rules
         run: npm test
+      - name: Test v0.3.2 Godot reference rules
+        run: node --test tools/web-baseline/world.test.js
+      - name: Test Godot proxy with local fake provider
+        run: node tools/test-godot-proxy.mjs
       - name: Check whitespace
         run: git diff --check
