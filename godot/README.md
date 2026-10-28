@@ -66,6 +66,10 @@ node --env-file=.env tools/godot-proxy.mjs
 
 ## 验证
 
+对照测试生成的大型JSON保存在工程外的`../godot-test-data/reference.json`，避免在编辑器中打开单行大文件后，恢复会话时卡在加载进度。运行下面的测试命令会自动生成该文件。
+
+若旧会话已卡住，先结束该工程的无响应进程，备份`.godot/editor/`，再从`editor_layout.cfg`的`open_scripts`和`selected_script`移除`res://tests/reference.json`，并清理`project_metadata.cfg`中的对应最近文件记录；重新打开项目即可。无需删除游戏源码。
+
 在仓库根目录执行；需要 Node.js 24 和 Godot 4.7.2：
 
 ```sh

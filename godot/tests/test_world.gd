@@ -46,7 +46,7 @@ func compare(actual: Variant, expected: Variant, path: String) -> void:
 
 func run() -> void:
 	var rules = WorldRules.new()
-	var path = "res://tests/reference.json"
+	var path = ProjectSettings.globalize_path("res://").path_join("../godot-test-data/reference.json")
 	if not FileAccess.file_exists(path):
 		printerr("Run node tools/godot-reference.mjs from the repository first.")
 		quit(1)

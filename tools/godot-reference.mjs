@@ -58,6 +58,8 @@ scenario('economic-debt-route',[...economic,{kind:'oath',text:'所有债务必�
 const capCities=initial(123).cities;
 capCities.forEach((c,i)=>{Object.assign(c,{x:[400,528,272,400,400,528][i],y:[300,300,300,428,172,428][i],ecology:50,eventSeen:['hunger','unrest','seed','market','refugees','feast','craft','isolation','torch'],territory:{shape:'O',angle:0,spin:0},vx:-Math.sin(.2+c.origin.x)*1.1,vy:-Math.cos(1/6+c.origin.y)*1.1});});
 scenario('trade-income-cap',[{kind:'worldPatch',values:{cities:capCities}},{kind:'action',action:'observe'}]);
-await mkdir(new URL('../godot/tests/',import.meta.url),{recursive:true});
-await writeFile(new URL('../godot/tests/reference.json',import.meta.url),JSON.stringify(scenarios));
+// Keep the large single-line fixture outside res:// so the editor cannot
+// accidentally reopen/highlight it while restoring its previous session.
+await mkdir(new URL('../godot-test-data/',import.meta.url),{recursive:true});
+await writeFile(new URL('../godot-test-data/reference.json',import.meta.url),JSON.stringify(scenarios));
 console.log(`Generated ${scenarios.length} scenarios, ${scenarios.reduce((n,s)=>n+s.ops.length,0)} operations (including rejected actions).`);
