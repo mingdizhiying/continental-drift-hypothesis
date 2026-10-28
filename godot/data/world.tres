@@ -1,0 +1,264 @@
+[gd_resource type="Resource" script_class="WorldConfig" load_steps=29 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/world_config.gd" id="World"]
+[ext_resource type="Script" path="res://scripts/data/city_definition.gd" id="City"]
+[ext_resource type="Script" path="res://scripts/data/action_definition.gd" id="Action"]
+[ext_resource type="Script" path="res://scripts/data/citizen_event_definition.gd" id="Event"]
+
+[sub_resource type="Resource" id="ember"]
+script = ExtResource("City")
+id = "ember"
+city_name = "余烬城"
+start = Vector2(180, 180)
+velocity = Vector2(2.3, 1.1)
+lore = "炉火与工艺"
+food = 50
+peace = 60
+trade = 42
+ecology = 70
+tint = Color(0.65, 0.61, 0.39, 1)
+
+[sub_resource type="Resource" id="grove"]
+script = ExtResource("City")
+id = "grove"
+city_name = "苔原城"
+start = Vector2(390, 145)
+velocity = Vector2(-1.4, 2.2)
+lore = "林地与灵木"
+food = 52
+peace = 58
+trade = 45
+ecology = 66
+tint = Color(0.35, 0.6, 0.47, 1)
+
+[sub_resource type="Resource" id="tide"]
+script = ExtResource("City")
+id = "tide"
+city_name = "潮汐城"
+start = Vector2(710, 210)
+velocity = Vector2(-2.1, -1.5)
+lore = "航海与贸易"
+food = 54
+peace = 56
+trade = 48
+ecology = 62
+tint = Color(0.36, 0.57, 0.64, 1)
+
+[sub_resource type="Resource" id="archive"]
+script = ExtResource("City")
+id = "archive"
+city_name = "旧誓城"
+start = Vector2(245, 420)
+velocity = Vector2(1.8, -1.9)
+lore = "记忆与学识"
+food = 56
+peace = 54
+trade = 51
+ecology = 58
+tint = Color(0.54, 0.51, 0.64, 1)
+
+[sub_resource type="Resource" id="grain"]
+script = ExtResource("City")
+id = "grain"
+city_name = "麦穗城"
+start = Vector2(550, 405)
+velocity = Vector2(-2.2, 1.1)
+lore = "农田与粮仓"
+food = 58
+peace = 52
+trade = 54
+ecology = 54
+tint = Color(0.65, 0.65, 0.4, 1)
+
+[sub_resource type="Resource" id="mist"]
+script = ExtResource("City")
+id = "mist"
+city_name = "雾隐城"
+start = Vector2(795, 450)
+velocity = Vector2(-1.7, -1.6)
+lore = "边境与隐秘"
+food = 60
+peace = 50
+trade = 57
+ecology = 50
+tint = Color(0.4, 0.57, 0.56, 1)
+
+[sub_resource type="Resource" id="farm"]
+script = ExtResource("Action")
+id = "farm"
+title = "组织耕种"
+description = "农田"
+place = "农田"
+cost = {"trade":2,"ecology":3}
+gain = {"food":10}
+
+[sub_resource type="Resource" id="build"]
+script = ExtResource("Action")
+id = "build"
+title = "建设集市"
+description = "集市"
+place = "集市"
+cost = {"food":4,"ecology":4}
+gain = {"trade":9}
+
+[sub_resource type="Resource" id="restore"]
+script = ExtResource("Action")
+id = "restore"
+title = "修复林地"
+description = "林地"
+place = "林地"
+cost = {"food":3,"trade":5}
+gain = {"ecology":10}
+
+[sub_resource type="Resource" id="investigate"]
+script = ExtResource("Action")
+id = "investigate"
+title = "倾听与调解"
+description = "旧誓广场 · 守屏人祈"
+place = "旧誓广场 · 守屏人祈"
+cost = {"food":3,"trade":2}
+gain = {"peace":7}
+
+[sub_resource type="Resource" id="forest"]
+script = ExtResource("Action")
+id = "forest"
+title = "采集灵木"
+description = "无声林地 · 树灵苔"
+place = "无声林地 · 树灵苔"
+cost = {"ecology":10,"peace":4}
+gain = {"trade":12}
+
+[sub_resource type="Resource" id="forge"]
+script = ExtResource("Action")
+id = "forge"
+title = "修复圣光屏障"
+description = "余烬工坊 · 铁匠烬"
+place = "余烬工坊 · 铁匠烬"
+cost = {"trade":18,"food":7,"ecology":4,"peace":3}
+gain = {"barrier":2}
+
+[sub_resource type="Resource" id="reveal"]
+script = ExtResource("Action")
+id = "reveal"
+title = "公开秘密，取回光核"
+description = "旧誓广场 · 守屏人祈"
+place = "旧誓广场 · 守屏人祈"
+cost = {"peace":16,"trade":4}
+gain = {"barrier":2}
+
+[sub_resource type="Resource" id="observe"]
+script = ExtResource("Action")
+id = "observe"
+title = "观察世界"
+description = "瞭望台"
+place = "瞭望台"
+cost = {}
+gain = {}
+
+[sub_resource type="Resource" id="hunger"]
+script = ExtResource("Event")
+id = "hunger"
+title = "粮仓告急"
+condition = "粮食<25"
+text = "居民为最后的口粮争执。"
+effect = {"peace":-3}
+repeat = false
+predicate = "hunger"
+
+[sub_resource type="Resource" id="unrest"]
+script = ExtResource("Event")
+id = "unrest"
+title = "广场请愿"
+condition = "安定<35"
+text = "居民要求城主解释漂移和分配制度。"
+effect = {"trade":-3}
+repeat = false
+predicate = "unrest"
+
+[sub_resource type="Resource" id="seed"]
+script = ExtResource("Event")
+id = "seed"
+title = "归林的幼苗"
+condition = "生态≥70"
+text = "林地向居民赠予新的种子。"
+effect = {"food":3}
+repeat = false
+predicate = "seed"
+
+[sub_resource type="Resource" id="market"]
+script = ExtResource("Event")
+id = "market"
+title = "流动集市"
+condition = "至少一条未休战的近距离领地商路"
+text = "漂移缩短路程，商贩重新搭起集市。"
+effect = {"trade":3}
+repeat = false
+predicate = "market"
+
+[sub_resource type="Resource" id="refugees"]
+script = ExtResource("Event")
+id = "refugees"
+title = "漂流的旅人"
+condition = "最近城市安定<40"
+text = "邻城旅人带来动荡的消息，居民分出粮食接待他们。"
+effect = {"food":-2,"peace":1}
+repeat = false
+predicate = "refugees"
+
+[sub_resource type="Resource" id="feast"]
+script = ExtResource("Event")
+id = "feast"
+title = "共享晚餐"
+condition = "粮食≥65且安定≥60"
+text = "居民摆出长桌，与陌生人分享晚餐。"
+effect = {"food":-2,"peace":3}
+repeat = false
+predicate = "feast"
+
+[sub_resource type="Resource" id="craft"]
+script = ExtResource("Event")
+id = "craft"
+title = "工匠学徒"
+condition = "繁荣≥60"
+text = "工匠扩大生产，也消耗了一片林地。"
+effect = {"trade":2,"ecology":-1}
+repeat = false
+predicate = "craft"
+
+[sub_resource type="Resource" id="isolation"]
+script = ExtResource("Event")
+id = "isolation"
+title = "失联的信使"
+condition = "与所有其他城市领地边界距离均超过一格"
+text = "信使没能返回，居民意识到城市正在远离世界。"
+effect = {"peace":-2}
+repeat = false
+predicate = "isolation"
+
+[sub_resource type="Resource" id="torch"]
+script = ExtResource("Event")
+id = "torch"
+title = "火炬下的守夜人"
+condition = "本城誓约满足实行条件"
+text = "居民轮流守护火炬，确认承诺仍然有效。"
+effect = {"peace":1}
+repeat = false
+predicate = "torch"
+
+[sub_resource type="Resource" id="watch"]
+script = ExtResource("Event")
+id = "watch"
+title = "街巷守望"
+condition = "没有其他未发生事件满足条件"
+text = "居民记录地平线的变化，等待使者的决定。"
+effect = {}
+repeat = true
+predicate = "watch"
+
+[resource]
+script = ExtResource("World")
+fog_enabled = true
+beacon_cost = {"trade": 20, "food": 5, "ecology": 3}
+cities = Array[ExtResource("City")]([SubResource("ember"), SubResource("grove"), SubResource("tide"), SubResource("archive"), SubResource("grain"), SubResource("mist")])
+actions = Array[ExtResource("Action")]([SubResource("farm"), SubResource("build"), SubResource("restore"), SubResource("investigate"), SubResource("forest"), SubResource("forge"), SubResource("reveal"), SubResource("observe")])
+events = Array[ExtResource("Event")]([SubResource("hunger"), SubResource("unrest"), SubResource("seed"), SubResource("market"), SubResource("refugees"), SubResource("feast"), SubResource("craft"), SubResource("isolation"), SubResource("torch"), SubResource("watch")])

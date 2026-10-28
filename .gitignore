@@ -19,3 +19,10 @@ Thumbs.db
 .vscode/
 .idea/
 coverage/
+
+# Godot generated imports and local validation outputs
+godot/.godot/
+godot/tests/reference.json
+godot-test-data/
+godot-preview/
+godot/builds/

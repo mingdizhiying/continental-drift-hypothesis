@@ -1,0 +1,571 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="Main"]
+[ext_resource type="Theme" path="res://theme/atlas.tres" id="Theme"]
+[ext_resource type="PackedScene" path="res://scenes/world_map.tscn" id="Map"]
+[ext_resource type="PackedScene" path="res://scenes/metric.tscn" id="Metric"]
+[ext_resource type="Resource" path="res://data/world.tres" id="Config"]
+[ext_resource type="Script" path="res://scripts/ai_client.gd" id="AI"]
+[ext_resource type="PackedScene" path="res://scenes/action_card.tscn" id="ActionCard"]
+[ext_resource type="PackedScene" path="res://scenes/echo_dialog.tscn" id="Echo"]
+
+[sub_resource type="StyleBoxFlat" id="Background"]
+bg_color = Color(0.035, 0.075, 0.09, 1)
+
+[node name="Main" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("Theme")
+theme_override_styles/panel = SubResource("Background")
+script = ExtResource("Main")
+config = ExtResource("Config")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 14
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+
+[node name="Brand" type="VBoxContainer" parent="Margin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Margin/Layout/Header/Brand"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "大陆漂移假说"
+
+[node name="Subtitle" type="Label" parent="Margin/Layout/Header/Brand"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "THE CONTINENTAL DRIFT HYPOTHESIS   /   你留下什么不变？"
+
+[node name="Mode" type="Label" parent="Margin/Layout/Header"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "本地模拟 · GODOT 原生版"
+
+[node name="RulesButton" type="Button" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "玩法说明"
+
+[node name="ExportButton" type="Button" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "导出历史"
+tooltip_text = "导出完整世界记录（包含迷雾中未显示的数据），供复盘与调试。"
+
+[node name="ResetButton" type="Button" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "重新创造世界"
+
+[node name="EndingPanel" type="PanelContainer" parent="Margin/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Margin/Layout/EndingPanel"]
+layout_mode = 2
+
+[node name="EndingHeading" type="Label" parent="Margin/Layout/EndingPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 2
+theme_type_variation = &"Heading"
+
+[node name="EndingSummary" type="Label" parent="Margin/Layout/EndingPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="EndingCities" type="Label" parent="Margin/Layout/EndingPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 2
+
+[node name="FullEndingButton" type="Button" parent="Margin/Layout/EndingPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "查看完整结局与历史依据"
+
+[node name="StatusPanel" type="PanelContainer" parent="Margin/Layout"]
+layout_mode = 2
+
+[node name="Stats" type="HBoxContainer" parent="Margin/Layout/StatusPanel"]
+layout_mode = 2
+
+[node name="Clock" type="Label" parent="Margin/Layout/StatusPanel/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "世界时间  00 / 60"
+
+[node name="Current" type="Label" parent="Margin/Layout/StatusPanel/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "当前治理  余烬城"
+
+[node name="Tenure" type="Label" parent="Margin/Layout/StatusPanel/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "剩余任期  6 轮"
+
+[node name="Next" type="Label" parent="Margin/Layout/StatusPanel/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "最近下一站  苔原城"
+
+[node name="Body" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="MapColumn" type="VBoxContainer" parent="Margin/Layout/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.15
+theme_override_constants/separation = 12
+
+[node name="MapPanel" type="PanelContainer" parent="Margin/Layout/Body/MapColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"MapCard"
+
+[node name="MapLayout" type="VBoxContainer" parent="Margin/Layout/Body/MapColumn/MapPanel"]
+layout_mode = 2
+
+[node name="MapHeading" type="HBoxContainer" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout/MapHeading"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Heading"
+text = "漂移中的世界"
+
+[node name="Hint" type="Label" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout/MapHeading"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "每格64 · 随行动漂移与旋转"
+
+[node name="OpenEchoButton" type="Button" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout/MapHeading"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+theme_type_variation = &"GoldButton"
+text = "查看本轮回响"
+
+[node name="WorldMap" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout" instance=ExtResource("Map")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FogStatus" type="Label" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "迷雾：仅本城、接壤领土和贸易城市中心"
+autowrap_mode = 2
+
+[node name="CityTabs" type="HBoxContainer" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Legend" type="Label" parent="Margin/Layout/Body/MapColumn/MapPanel/MapLayout"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "红色：重叠争夺  ·  金色交叠：休战  ·  蓝色：贸易  ·  虚线：起点位移"
+autowrap_mode = 2
+
+[node name="SidePanel" type="PanelContainer" parent="Margin/Layout/Body"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SideLayout" type="VBoxContainer" parent="Margin/Layout/Body/SidePanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="CityHeading" type="HBoxContainer" parent="Margin/Layout/Body/SidePanel/SideLayout"]
+layout_mode = 2
+
+[node name="CityName" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/CityHeading"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Heading"
+text = "余烬城"
+
+[node name="CityRole" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/CityHeading"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "当前治理"
+
+[node name="CityDescription" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="Metrics" type="GridContainer" parent="Margin/Layout/Body/SidePanel/SideLayout"]
+layout_mode = 2
+columns = 2
+
+[node name="Food" parent="Margin/Layout/Body/SidePanel/SideLayout/Metrics" instance=ExtResource("Metric")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Peace" parent="Margin/Layout/Body/SidePanel/SideLayout/Metrics" instance=ExtResource("Metric")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Trade" parent="Margin/Layout/Body/SidePanel/SideLayout/Metrics" instance=ExtResource("Metric")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Ecology" parent="Margin/Layout/Body/SidePanel/SideLayout/Metrics" instance=ExtResource("Metric")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Tabs" type="TabContainer" parent="Margin/Layout/Body/SidePanel/SideLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_horizontal = 3
+
+[node name="VisibilityNotice" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"Muted"
+autowrap_mode = 2
+text = "只能观察这座城市的领土，城内情况仍被迷雾掩盖。"
+
+[node name="Governance" type="ScrollContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_name = "治理"
+
+[node name="Content" type="VBoxContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Oath" type="ScrollContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_name = "誓约"
+
+[node name="Content" type="VBoxContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Diplomacy" type="ScrollContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_name = "领地外交"
+
+[node name="Content" type="VBoxContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Diplomacy"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="BeaconPanel" type="VBoxContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content"]
+layout_mode = 2
+
+[node name="BeaconStatus" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/BeaconPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.93, 0.82, 0.55, 1)
+autowrap_mode = 2
+
+[node name="BeaconButton" type="Button" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/BeaconPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"GoldButton"
+text = "永久点亮灯塔 · 不耗回合"
+
+[node name="BeaconCost" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/BeaconPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 2
+
+[node name="Actions" type="GridContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 2
+
+[node name="Farm" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Build" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Restore" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Investigate" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Forest" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Forge" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Reveal" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Observe" instance=ExtResource("ActionCard") parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BarrierStatus" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Governance/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.89, 0.76, 0.5, 1)
+autowrap_mode = 2
+text = "圣光屏障 0 / 6"
+
+[node name="LegacyLaws" type="HBoxContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Fire" type="Button" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content/LegacyLaws"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "禁火"
+
+[node name="Silence" type="Button" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content/LegacyLaws"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "禁谎"
+
+[node name="Memory" type="Button" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content/LegacyLaws"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "偿债"
+
+[node name="DiplomacyTitle" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Diplomacy/Content"]
+layout_mode = 2
+theme_type_variation = &"Heading"
+text = "领地关系与外交"
+
+[node name="TerritoryStatus" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Diplomacy/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="Relations" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Diplomacy/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="DiplomacyTarget" type="OptionButton" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Diplomacy/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MediateButton" type="Button" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Diplomacy/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "外交调停 · 支付8繁荣 · 休战三轮"
+
+[node name="DiplomacyHint" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Diplomacy/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 2
+
+[node name="OathHeading" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+layout_mode = 2
+theme_type_variation = &"Heading"
+text = "誓约火炬"
+
+[node name="OathState" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+text = "此城尚未点燃誓约火炬。"
+
+[node name="OathInput" type="TextEdit" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+placeholder_text = "例如：愿此城永不缺粮（1–160字）"
+wrap_mode = 1
+
+[node name="OathButtons" type="HBoxContainer" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+layout_mode = 2
+
+[node name="JudgeButton" type="Button" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content/OathButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "判定实行条件"
+
+[node name="ConfirmButton" type="Button" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content/OathButtons"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"GoldButton"
+text = "点燃火炬，确认"
+
+[node name="OathPreview" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.89, 0.76, 0.5, 1)
+autowrap_mode = 2
+
+[node name="AIEnabled" type="CheckBox" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "使用真实 AI 接口（需启动本地代理）"
+
+[node name="AIStatus" type="Label" parent="Margin/Layout/Body/SidePanel/SideLayout/Tabs/Oath/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 2
+text = "本地模拟：关键词判定誓约、规则演化世界。"
+
+[node name="HistoryPanel" type="PanelContainer" parent="Margin/Layout"]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+
+[node name="HistoryLayout" type="VBoxContainer" parent="Margin/Layout/HistoryPanel"]
+layout_mode = 2
+
+[node name="HistoryHeading" type="HBoxContainer" parent="Margin/Layout/HistoryPanel/HistoryLayout"]
+layout_mode = 2
+
+[node name="HistoryToggle" type="Button" parent="Margin/Layout/HistoryPanel/HistoryLayout/HistoryHeading"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+flat = true
+toggle_mode = true
+alignment = 0
+theme_override_font_sizes/font_size = 20
+text = "世界历史  ▸"
+
+[node name="EndingButton" type="Button" parent="Margin/Layout/HistoryPanel/HistoryLayout/HistoryHeading"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"GoldButton"
+text = "查看世界结局"
+
+[node name="Hint" type="Label" parent="Margin/Layout/HistoryPanel/HistoryLayout/HistoryHeading"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "显示最近30条 · 导出包含全部快照"
+
+[node name="History" type="RichTextLabel" parent="Margin/Layout/HistoryPanel/HistoryLayout"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 128)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+
+[node name="Footer" type="Label" parent="Margin/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 2
+text = "每行动推进一轮 · 每六轮迁往最近的其他城市 · 立誓不推进时间 · 第六十轮结算"
+
+[node name="AIClient" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("AI")
+
+[node name="ExportDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "导出完整世界历史"
+size = Vector2i(900, 600)
+file_mode = 4
+access = 2
+filters = PackedStringArray("*.json ; JSON 世界历史")
+use_native_dialog = true
+
+[node name="EndingDialog" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+title = "六十轮 · 世界结算"
+size = Vector2i(800, 620)
+ok_button_text = "回到世界"
+
+[node name="Content" type="RichTextLabel" parent="EndingDialog"]
+offset_left = 22.0
+offset_top = 18.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -22.0
+offset_bottom = -60.0
+bbcode_enabled = true
+theme_override_font_sizes/normal_font_size = 17
+
+[node name="RulesDialog" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+title = "玩法与事件条件"
+size = Vector2i(780, 660)
+ok_button_text = "开始漂移"
+
+[node name="Content" type="RichTextLabel" parent="RulesDialog"]
+offset_left = 22.0
+offset_top = 18.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -22.0
+offset_bottom = -60.0
+bbcode_enabled = true
+theme_override_font_sizes/normal_font_size = 16
+[node name="EchoDialog" parent="." instance=ExtResource("Echo")]
+unique_name_in_owner = true
